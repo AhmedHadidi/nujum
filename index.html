@@ -210,13 +210,30 @@ const DEFAULT_BADGES = [
   { id:"streak3", name:"٣ أيام متتالية", icon:"🔥", need:3, type:"streak"},
   { id:"streak7", name:"أسبوع كامل",  icon:"💎", need:7,   type:"streak"},
   { id:"points100",name:"مئة نقطة",   icon:"👑", need:100, type:"points"},
+  { id:"quran3",  name:"حافظ القرآن", icon:"📖", need:3,   type:"category", cat:"quran" },
+  { id:"adhkar3", name:"نجم الأذكار", icon:"🌙", need:3,   type:"category", cat:"adhkar" },
 ];
 const BADGE_TYPES = [
-  { id:"tasks",  label:"عدد المهام المنجزة" },
-  { id:"points", label:"عدد النقاط" },
-  { id:"stages", label:"عدد المراحل المكتملة" },
-  { id:"streak", label:"أيام متتالية" },
+  { id:"tasks",    label:"عدد المهام المنجزة" },
+  { id:"points",   label:"عدد النقاط" },
+  { id:"stages",   label:"عدد المراحل المكتملة" },
+  { id:"streak",   label:"أيام متتالية" },
+  { id:"category", label:"إنجاز مهام في فئة محدّدة" },
 ];
+
+// حساب القيمة الحالية لشرط الوسام لطفل معيّن
+function badgeValue(b, child, allTasks, stages){
+  const mine = allTasks.filter(t=>t.childId===child.id);
+  const done = mine.filter(t=>t.status==="done");
+  if(b.type==="points")   return child.points;
+  if(b.type==="streak")   return child.streak||0;
+  if(b.type==="stages")   return stages.filter(s=>{
+      const st=mine.filter(t=>t.stageId===s.id);
+      return st.length>0 && st.every(t=>t.status==="done");
+    }).length;
+  if(b.type==="category") return done.filter(t=>t.catId===b.cat).length;
+  return done.length; // tasks
+}
 
 function seedDB(){
   const parentId = uid();
@@ -388,15 +405,10 @@ function useStore(){
           const y = new Date(Date.now()-864e5).toISOString().slice(0,10);
           streak = c.lastDone===y ? c.streak+1 : 1;
         }
-        const doneCount = tasks.filter(t=>t.childId===c.id&&t.status==="done").length;
-        const doneStages = d.stages.filter(s=>{
-          const st=tasks.filter(t=>t.childId===c.id&&t.stageId===s.id);
-          return st.length>0&&st.every(t=>t.status==="done");
-        }).length;
         const earned = new Set(c.earnedBadges);
+        const snap = {...c, points:pts, streak};
         (d.badges||[]).forEach(b=>{
-          const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : streak;
-          if(val>=b.need) earned.add(b.id);
+          if(badgeValue(b, snap, tasks, d.stages) >= b.need) earned.add(b.id);
         });
         return {...c, points:pts, level:levelFor(pts), streak, lastDone:today, earnedBadges:[...earned]};
       });
@@ -416,16 +428,11 @@ function useStore(){
       const children = d.children.map(c=>{
         if(c.id!==task.childId) return c;
         const pts = Math.max(0, c.points - task.points);
-        const doneCount = tasks.filter(t=>t.childId===c.id&&t.status==="done").length;
-        const doneStages = d.stages.filter(s=>{
-          const st=tasks.filter(t=>t.childId===c.id&&t.stageId===s.id);
-          return st.length>0&&st.every(t=>t.status==="done");
-        }).length;
         // recompute earned badges from the new state (a reversal can revoke a badge)
         const earned = new Set();
+        const snap = {...c, points:pts};
         (d.badges||[]).forEach(b=>{
-          const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : c.streak;
-          if(val>=b.need) earned.add(b.id);
+          if(badgeValue(b, snap, tasks, d.stages) >= b.need) earned.add(b.id);
         });
         return {...c, points:pts, level:levelFor(pts), earnedBadges:[...earned]};
       });
@@ -452,16 +459,9 @@ function useStore(){
   // إعادة حساب الأوسمة المكتسبة لكل طفل بناءً على قائمة الأوسمة الحالية
   const recomputeAllBadges = (d)=>{
     const children = d.children.map(c=>{
-      const doneCount = d.tasks.filter(t=>t.childId===c.id&&t.status==="done").length;
-      const pts = c.points;
-      const doneStages = d.stages.filter(s=>{
-        const st=d.tasks.filter(t=>t.childId===c.id&&t.stageId===s.id);
-        return st.length>0&&st.every(t=>t.status==="done");
-      }).length;
       const earned = new Set();
       (d.badges||[]).forEach(b=>{
-        const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : c.streak;
-        if(val>=b.need) earned.add(b.id);
+        if(badgeValue(b, c, d.tasks, d.stages) >= b.need) earned.add(b.id);
       });
       return {...c, earnedBadges:[...earned]};
     });
@@ -716,7 +716,7 @@ function ChildPortal({childId,onLogout}){
                   <span className="ico">{earned?b.icon:"🔒"}</span>
                   <span className="nm">{b.name}</span>
                   {!earned && <span style={{fontSize:11,color:"var(--muted)"}}>
-                    {b.type==="tasks"?`أنجز ${b.need} مهمة`:b.type==="points"?`اجمع ${b.need} نقطة`:b.type==="stages"?`أكمل مرحلة`:`${b.need} أيام متتالية`}
+                    {badgeRule(b)}
                   </span>}
                 </div>
               );
@@ -1203,6 +1203,10 @@ function StageForm({stage,onSave,onClose}){
 
 /* ---- إدارة الأوسمة — Badges manager ---- */
 function badgeRule(b){
+  if(b.type==="category"){
+    const cat=CATEGORIES.find(c=>c.id===b.cat);
+    return `عند إنجاز ${b.need} مهمة في «${cat?cat.name:"فئة"}»`;
+  }
   return b.type==="tasks"?`عند إنجاز ${b.need} مهمة`
     :b.type==="points"?`عند جمع ${b.need} نقطة`
     :b.type==="stages"?`عند إكمال ${b.need} مرحلة`
@@ -1273,11 +1277,19 @@ function BadgeForm({badge,onSave,onClose}){
       </div>
       <div className="row" style={{gap:12}}>
         <div className="field" style={{flex:2}}><label>شرط الحصول عليه</label>
-          <select value={d.type} onChange={e=>setD({...d,type:e.target.value})}>
+          <select value={d.type} onChange={e=>{
+            const type=e.target.value;
+            setD(x=>({...x,type,cat: type==="category" ? (x.cat||CATEGORIES[0].id) : x.cat}));
+          }}>
             {BADGE_TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
         <div className="field" style={{flex:1}}><label>القيمة المطلوبة</label>
           <input type="number" min="1" value={d.need} onChange={e=>setD({...d,need:Math.max(1,+e.target.value||1)})}/></div>
       </div>
+      {d.type==="category" && (
+        <div className="field"><label>الفئة</label>
+          <select value={d.cat||CATEGORIES[0].id} onChange={e=>setD({...d,cat:e.target.value})}>
+            {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
+      )}
       <div className="tag tag-muted" style={{marginBottom:14}}>📌 {badgeRule(d)}</div>
       <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} disabled={!d.name.trim()} onClick={()=>onSave(d)}>حفظ الوسام</button>
     </Modal>
