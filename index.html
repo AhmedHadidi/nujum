@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>نجوم — رحلة الإنجاز للأطفال</title>
+<title>رحلة العباقرة — رحلة الإنجاز للأطفال</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Lalezar&display=swap" rel="stylesheet" />
@@ -173,6 +173,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .minibar{height:9px;border-radius:999px;background:rgba(42,42,56,.08);overflow:hidden;flex:1}
 .minibar>span{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--sky))}
 @media(max-width:640px){.brand h1{font-size:20px}.card-pad{padding:18px}.shell{padding:0 12px 48px}}
+.site-footer{text-align:center;padding:22px 16px 30px;color:var(--muted);font-size:13.5px;font-weight:500}
+.site-footer .name{color:var(--primary);font-weight:800}
 </style>
 </head>
 <body>
@@ -454,6 +456,13 @@ function CatTag({catId,catById}){
   return <span className={`tag tag-${c.color}`}>{c.icon} {c.name}</span>;
 }
 function ProgressBar({pct}){ return <div className="bar"><span style={{width:pct+"%"}}/></div>; }
+function Footer(){
+  return (
+    <footer className="site-footer">
+      💛 صُمّم بعناية بواسطة <span className="name">أحمد الحديدي</span>© {new Date().getFullYear()}
+    </footer>
+  );
+}
 
 function Modal({title,onClose,children,wide}){
   return (
@@ -539,6 +548,7 @@ function Login({onLogin}){
           </div>
         )}
       </div>
+      <Footer/>
     </div>
   );
 }
@@ -704,6 +714,7 @@ function ChildPortal({childId,onLogout}){
         )}
       </div>
 
+      <Footer/>
       {celebrate && <CelebrationModal child={child} stage={celebrate} onClose={()=>setCelebrate(null)}/>}
     </div>
   );
@@ -727,7 +738,7 @@ function CelebrationModal({child,stage,onClose}){
       <p>تُمنح هذه الشهادة بكل فخر إلى</p><div class="nm">${child.name}</div>
       <p>لإكماله بنجاح كل مهام</p><div class="r">«${stage.name}»</div>
       <p style="margin-top:20px">🎁 المكافأة: ${stage.reward.title}</p>
-      <p class="d">منصة نُجوم — ${new Date().toLocaleDateString("ar-EG")}</p></div>
+      <p class="d">منصة رحلة العباقرة — ${new Date().toLocaleDateString("ar-EG")}</p></div>
       <scr`+`ipt>window.print()</scr`+`ipt></body></html>`);
     w.document.close();
   };
@@ -796,7 +807,7 @@ function ParentDashboard({onLogout}){
       <div className="topbar"><div className="topbar-in">
         <div className="brand">
           <div className="logo">⭐</div>
-          <div><h1 className="display">نُجوم — لوحة الإدارة</h1><small>إدارة العائلة والمهام</small></div>
+          <div><h1 className="display">رحلة العباقرة — لوحة الإدارة</h1><small>إدارة العائلة والمهام</small></div>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={onLogout}>خروج</button>
       </div></div>
@@ -811,6 +822,7 @@ function ParentDashboard({onLogout}){
         {tab==="stages"   && <StagesMgr/>}
         {tab==="reports"  && <Reports/>}
       </div>
+      <Footer/>
     </div>
   );
 }
