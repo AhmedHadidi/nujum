@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>نجوم — رحلة الإنجاز للأطفال</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Lalezar&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
+<!-- إعدادات الاتصال بـ Supabase (عدّلها في ملف config.js) -->
+<script src="./config.js"></script>
+<!-- تحميل عميل Supabase وإتاحته عالمياً قبل تشغيل التطبيق -->
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  try{
+    if(window.NUJUM_CONFIG && window.NUJUM_CONFIG.url && !window.NUJUM_CONFIG.url.includes("ضع_رابط")){
+      window.supabaseClient = createClient(window.NUJUM_CONFIG.url, window.NUJUM_CONFIG.anonKey);
+    }
+  }catch(e){ console.error("Supabase init failed:", e); }
+  window.__supabaseReady = true;
+  window.dispatchEvent(new Event("supabase-ready"));
+</script>
+<style>
+:root{
+  --bg:#FBF7F0; --surface:#FFFFFF; --ink:#2A2A38; --muted:#7C7A88;
+  --primary:#6C63FF; --primary-d:#4F46C9; --mint:#21C1A6; --mint-d:#159C84;
+  --sun:#FFB020; --sun-d:#E08A00; --coral:#FF7A6B; --coral-d:#E0533F;
+  --sky:#39A0ED; --line:rgba(42,42,56,0.10); --line-2:rgba(42,42,56,0.18);
+  --radius:18px; --radius-sm:12px; --shadow:0 10px 30px rgba(76,70,150,0.08);
+  --shadow-lg:0 18px 50px rgba(76,70,150,0.16);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Tajawal',system-ui,sans-serif; background:var(--bg); color:var(--ink);
+  line-height:1.7; font-size:16px; -webkit-font-smoothing:antialiased;
+}
+.display{font-family:'Lalezar','Tajawal',cursive}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:16px}
+::selection{background:var(--primary);color:#fff}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* layout */
+.app{min-height:100vh;display:flex;flex-direction:column}
+.shell{flex:1;width:100%;max-width:1160px;margin:0 auto;padding:0 18px 64px}
+.row{display:flex;gap:14px}
+.wrap{flex-wrap:wrap}
+.between{justify-content:space-between}
+.center{align-items:center}
+.col{display:flex;flex-direction:column}
+.grid{display:grid;gap:16px}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(251,247,240,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1160px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--sky));display:grid;place-items:center;color:#fff;font-size:24px;box-shadow:var(--shadow)}
+.brand h1{font-size:24px;margin:0;letter-spacing:.5px}
+.brand small{display:block;font-size:11px;color:var(--muted);margin-top:-4px;font-family:'Tajawal'}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:14px;font-weight:700;font-size:15px;transition:transform .12s,box-shadow .2s,background .2s;border:1.5px solid transparent}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(108,99,255,.32)}
+.btn-primary:hover{background:var(--primary-d)}
+.btn-mint{background:var(--mint);color:#fff;box-shadow:0 8px 20px rgba(33,193,166,.3)}
+.btn-mint:hover{background:var(--mint-d)}
+.btn-ghost{background:var(--surface);border-color:var(--line-2);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.btn-sun{background:var(--sun);color:#5a3a00;box-shadow:0 8px 20px rgba(255,176,32,.3)}
+.btn-coral{background:var(--coral);color:#fff}
+.btn-sm{padding:7px 13px;font-size:13.5px;border-radius:11px}
+.btn-icon{padding:9px;border-radius:11px;background:var(--surface);border:1.5px solid var(--line-2);color:var(--muted)}
+.btn-icon:hover{color:var(--coral);border-color:var(--coral)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* cards */
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow);padding:20px}
+.card-pad{padding:24px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;font-size:12.5px;font-weight:700}
+.tag-mint{background:rgba(33,193,166,.14);color:var(--mint-d)}
+.tag-sun{background:rgba(255,176,32,.16);color:var(--sun-d)}
+.tag-primary{background:rgba(108,99,255,.13);color:var(--primary-d)}
+.tag-coral{background:rgba(255,122,107,.15);color:var(--coral-d)}
+.tag-muted{background:rgba(42,42,56,.07);color:var(--muted)}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:13.5px;font-weight:700;color:var(--ink)}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line-2);
+  background:var(--surface);transition:border .15s,box-shadow .15s;color:var(--ink)
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(108,99,255,.12)}
+.field textarea{resize:vertical;min-height:90px;line-height:1.8}
+
+/* progress */
+.bar{height:14px;border-radius:999px;background:rgba(42,42,56,.08);overflow:hidden}
+.bar > span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--mint),var(--sky));transition:width .9s cubic-bezier(.2,.8,.2,1)}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(28,24,52,.5);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;animation:fade .2s}
+.modal{background:var(--surface);border-radius:24px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:var(--shadow-lg);animation:pop .3s cubic-bezier(.2,.9,.3,1.2)}
+.modal-head{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:2}
+.modal-body{padding:24px}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:none}}
+
+/* tabs */
+.tabs{display:flex;gap:6px;background:rgba(42,42,56,.05);padding:5px;border-radius:16px;flex-wrap:wrap}
+.tab{padding:9px 16px;border-radius:12px;font-weight:700;font-size:14.5px;color:var(--muted);transition:.15s}
+.tab.on{background:var(--surface);color:var(--primary);box-shadow:var(--shadow)}
+
+/* avatars */
+.ava{border-radius:50%;object-fit:cover;background:linear-gradient(135deg,var(--sun),var(--coral));display:grid;place-items:center;color:#fff;font-weight:800;flex-shrink:0}
+
+/* stat */
+.stat{background:var(--surface);border-radius:16px;padding:16px 18px;border:1px solid var(--line)}
+.stat .n{font-size:30px;font-weight:800;line-height:1}
+.stat .l{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* child task */
+.task{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);transition:.18s}
+.task:hover{border-color:var(--line-2)}
+.task.done{background:rgba(33,193,166,.07);border-color:rgba(33,193,166,.3)}
+.task.pending{background:rgba(255,176,32,.08);border-color:rgba(255,176,32,.35)}
+.checkbtn{width:34px;height:34px;border-radius:11px;border:2.5px solid var(--line-2);display:grid;place-items:center;flex-shrink:0;transition:.15s;background:var(--surface);font-size:18px;color:transparent}
+.checkbtn.on{background:var(--mint);border-color:var(--mint);color:#fff}
+.checkbtn.wait{background:var(--sun);border-color:var(--sun);color:#5a3a00}
+
+/* badge grid */
+.badge{aspect-ratio:1;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;border:1.5px solid var(--line)}
+.badge.locked{background:rgba(42,42,56,.04);filter:grayscale(1);opacity:.55}
+.badge.earned{background:linear-gradient(160deg,#fff,rgba(255,176,32,.13));border-color:rgba(255,176,32,.4)}
+.badge .ico{font-size:38px}
+.badge .nm{font-size:12.5px;font-weight:700;line-height:1.3}
+
+/* login */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;background:
+  radial-gradient(circle at 15% 20%,rgba(108,99,255,.12),transparent 40%),
+  radial-gradient(circle at 85% 80%,rgba(33,193,166,.12),transparent 40%),var(--bg)}
+.login-card{max-width:440px;width:100%}
+.kid-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:14px}
+.kid-pick button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border-radius:18px;border:2px solid var(--line);background:var(--surface);transition:.15s}
+.kid-pick button:hover{border-color:var(--primary);transform:translateY(-3px)}
+
+/* celebration */
+.celebrate{text-align:center;padding:14px 8px 8px}
+.celebrate .trophy{font-size:80px;animation:bounce 1s ease infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.reward-reveal{background:linear-gradient(160deg,rgba(255,176,32,.16),rgba(255,122,107,.12));border-radius:20px;padding:22px;margin-top:8px;border:2px dashed var(--sun)}
+
+/* cert */
+.cert{border:3px solid var(--sun);border-radius:18px;padding:28px;text-align:center;background:linear-gradient(160deg,#fffdf6,#fff)}
+.cert .seal{width:74px;height:74px;border-radius:50%;background:linear-gradient(135deg,var(--sun),var(--coral));display:grid;place-items:center;color:#fff;font-size:36px;margin:0 auto 14px}
+
+/* misc */
+.empty{text-align:center;padding:46px 20px;color:var(--muted)}
+.empty .ico{font-size:54px;opacity:.5;margin-bottom:10px}
+.divline{height:1px;background:var(--line);margin:18px 0}
+.level-pill{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--primary),var(--sky));color:#fff;padding:7px 15px;border-radius:999px;font-weight:800;font-size:14px}
+.streak{display:inline-flex;align-items:center;gap:6px;background:rgba(255,122,107,.14);color:var(--coral-d);padding:7px 14px;border-radius:999px;font-weight:800}
+.rank-row{display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.rank-n{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:15px;background:rgba(42,42,56,.06)}
+.rank-n.g{background:rgba(255,176,32,.2);color:var(--sun-d)}
+.minibar{height:9px;border-radius:999px;background:rgba(42,42,56,.08);overflow:hidden;flex:1}
+.minibar>span{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--sky))}
+@media(max-width:640px){.brand h1{font-size:20px}.card-pad{padding:18px}.shell{padding:0 12px 48px}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, createContext, useContext } = React;
+
+/* ============================================================
+   طبقة البيانات — Data layer (localStorage persistence)
+   In production this is replaced by REST calls to the API.
+============================================================ */
+const DB_KEY = "nujum_db_v1";
+const SESS_KEY = "nujum_session_v1";
+
+const uid = () => Math.random().toString(36).slice(2,10);
+const todayStr = () => new Date().toISOString().slice(0,10);
+
+const CATEGORIES = [
+  { id:"quran",   name:"حفظ القرآن",      icon:"📖", color:"mint"   },
+  { id:"hadith",  name:"حفظ الأحاديث",    icon:"🕌", color:"primary"},
+  { id:"adhkar",  name:"الأذكار اليومية", icon:"🌙", color:"sun"    },
+  { id:"dua",     name:"الأدعية",         icon:"🤲", color:"coral"  },
+  { id:"learn",   name:"أنشطة تعليمية",   icon:"✏️", color:"primary"},
+  { id:"akhlaq",  name:"بناء الأخلاق",    icon:"💛", color:"sun"    },
+  { id:"home",    name:"مهام المنزل",     icon:"🧹", color:"mint"   },
+];
+
+const BADGES = [
+  { id:"first",   name:"أول خطوة",    icon:"🌱", need:1,   type:"tasks" },
+  { id:"ten",     name:"عشر مهام",    icon:"⭐", need:10,  type:"tasks" },
+  { id:"fifty",   name:"خمسون مهمة",  icon:"🌟", need:50,  type:"tasks" },
+  { id:"stage1",  name:"بطل المرحلة", icon:"🏅", need:1,   type:"stages"},
+  { id:"streak3", name:"٣ أيام متتالية", icon:"🔥", need:3, type:"streak"},
+  { id:"streak7", name:"أسبوع كامل",  icon:"💎", need:7,   type:"streak"},
+  { id:"points100",name:"مئة نقطة",   icon:"👑", need:100, type:"points"},
+];
+
+function seedDB(){
+  const parentId = uid();
+  const k1 = uid(), k2 = uid();
+  const stageA = uid(), stageB = uid(), stageC = uid();
+  const mk = (childId,stageId,catId,title,detail,points) =>
+    ({ id:uid(), childId, stageId, catId, title, detail, points, status:"todo", completedAt:null });
+  return {
+    parent:{ id:parentId, name:"ولي الأمر", username:"parent", pass:"1234" },
+    children:[
+      { id:k1, name:"يوسف", age:8, color:"sun",  photo:null, points:0, level:1, streak:0, lastDone:null, earnedBadges:[] },
+      { id:k2, name:"مريم", age:6, color:"coral",photo:null, points:0, level:1, streak:0, lastDone:null, earnedBadges:[] },
+    ],
+    stages:[
+      { id:stageA, name:"رحلة النور — المرحلة الأولى", order:1,
+        reward:{ title:"رحلة إلى الحديقة المائية 🎢", desc:"يوم كامل من المرح والألعاب المائية مع العائلة!", type:"experiential", image:null } },
+      { id:stageB, name:"كنوز الحفظ — المرحلة الثانية", order:2,
+        reward:{ title:"دراجة هوائية جديدة 🚲", desc:"دراجة بلونك المفضل لتنطلق بها!", type:"physical", image:null } },
+      { id:stageC, name:"نجم الأخلاق — المرحلة الثالثة", order:3,
+        reward:{ title:"مكافأة مالية ٥٠ ريال 💰", desc:"مبلغ مالي لتدخره أو تشتري ما تحب.", type:"financial", image:null } },
+    ],
+    tasks:[
+      mk(k1,stageA,"quran","حفظ سورة الإخلاص","قُلْ هُوَ اللَّهُ أَحَدٌ ...",10),
+      mk(k1,stageA,"adhkar","أذكار الصباح","الحمد لله الذي أحيانا بعد ما أماتنا ...",5),
+      mk(k1,stageA,"home","ترتيب غرفتك","رتب سريرك وألعابك كل صباح.",5),
+      mk(k1,stageA,"akhlaq","مساعدة أخيك الصغير","ساعد أخاك في مهمة واحدة اليوم.",5),
+      mk(k1,stageB,"quran","حفظ سورة الفلق","قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ...",15),
+      mk(k1,stageB,"hadith","حديث: إنما الأعمال بالنيات","عن عمر بن الخطاب رضي الله عنه ...",15),
+      mk(k1,stageC,"dua","دعاء دخول المنزل","حفظ الدعاء عند دخول المنزل.",10),
+      mk(k2,stageA,"quran","حفظ سورة الإخلاص","قُلْ هُوَ اللَّهُ أَحَدٌ ...",10),
+      mk(k2,stageA,"adhkar","دعاء النوم","باسمك اللهم أموت وأحيا.",5),
+      mk(k2,stageA,"home","ترتيب الألعاب","ضع ألعابك في صندوقها بعد اللعب.",5),
+      mk(k2,stageB,"akhlaq","قول الصدق","تحدث بصدق طوال اليوم.",10),
+    ],
+    activity:[],
+  };
+}
+
+/* ---- وضع التخزين: سحابي (Supabase) أو محلي احتياطي ---- */
+const sb = () => window.supabaseClient || null;
+const cloudReady = () => !!sb();
+const STATE_ID = "family";
+
+function localLoad(){
+  try{ const raw=localStorage.getItem(DB_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  const fresh=seedDB(); localStorage.setItem(DB_KEY,JSON.stringify(fresh)); return fresh;
+}
+function localSave(db){ try{ localStorage.setItem(DB_KEY,JSON.stringify(db)); }catch(e){} }
+
+// يقرأ الحالة من السحابة؛ إن كانت فارغة يزرع بيانات البداية ويحفظها.
+async function cloudLoad(){
+  const c=sb(); if(!c) return localLoad();
+  const { data, error } = await c.from("app_state").select("data").eq("id",STATE_ID).maybeSingle();
+  if(error){ console.error("cloudLoad",error); return localLoad(); }
+  const empty = !data || !data.data || !data.data.parent;
+  if(empty){
+    const fresh = seedDB();
+    await c.from("app_state").upsert({id:STATE_ID,data:fresh,updated_at:new Date().toISOString()});
+    return fresh;
+  }
+  return data.data;
+}
+async function cloudSave(db){
+  const c=sb(); if(!c){ localSave(db); return; }
+  const { error } = await c.from("app_state").upsert({id:STATE_ID,data:db,updated_at:new Date().toISOString()});
+  if(error){ console.error("cloudSave",error); localSave(db); }
+}
+
+
+/* ============================================================
+   منطق التطبيق المشترك — Shared logic & context
+============================================================ */
+const AppCtx = createContext(null);
+
+function levelFor(points){ return Math.max(1, Math.floor(points/50)+1); }
+function pointsIntoLevel(points){ return points % 50; }
+
+function useStore(){
+  const [db,setDb] = useState(null);          // null = جارٍ التحميل
+  const [ready,setReady] = useState(false);
+  const applyingRemote = useRef(false);        // لتجنّب حلقة الحفظ عند استقبال تحديث بعيد
+  const saveTimer = useRef(null);
+
+  // تحميل أولي من السحابة (أو محلياً) بعد جاهزية Supabase
+  useEffect(()=>{
+    let cancelled=false;
+    const boot=async()=>{
+      const initial = await cloudLoad();
+      if(cancelled) return;
+      applyingRemote.current=true;
+      setDb(initial); setReady(true);
+      setTimeout(()=>{applyingRemote.current=false;},0);
+    };
+    if(window.__supabaseReady) boot();
+    else window.addEventListener("supabase-ready",boot,{once:true});
+    return ()=>{cancelled=true;};
+  },[]);
+
+  // حفظ مع تأخير بسيط (debounce) عند كل تغيير محلي
+  useEffect(()=>{
+    if(!ready||db===null||applyingRemote.current) return;
+    if(saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>{ cloudSave(db); },350);
+  },[db,ready]);
+
+  // المزامنة الفورية بين الأجهزة عبر Realtime
+  useEffect(()=>{
+    const c=sb(); if(!c) return;
+    const ch=c.channel("app_state_sync")
+      .on("postgres_changes",{event:"*",schema:"public",table:"app_state",filter:`id=eq.${STATE_ID}`},
+        (payload)=>{
+          const incoming=payload.new&&payload.new.data;
+          if(!incoming) return;
+          applyingRemote.current=true;
+          setDb(incoming);
+          setTimeout(()=>{applyingRemote.current=false;},0);
+        })
+      .subscribe();
+    return ()=>{ c.removeChannel(ch); };
+  },[ready]);
+
+  const log = (text) => setDb(d=>({...d, activity:[{id:uid(),text,at:new Date().toISOString()},...d.activity].slice(0,200)}));
+
+  const catById = (id)=>CATEGORIES.find(c=>c.id===id);
+  const stageById = (id)=>db.stages.find(s=>s.id===id);
+  const childById = (id)=>db.children.find(c=>c.id===id);
+  const tasksOf = (childId)=>db.tasks.filter(t=>t.childId===childId);
+  const tasksOfStage = (childId,stageId)=>db.tasks.filter(t=>t.childId===childId && t.stageId===stageId);
+  const stagesWithTasks = (childId)=>db.stages.filter(s=>tasksOfStage(childId,s.id).length>0).sort((a,b)=>a.order-b.order);
+
+  const stageComplete = (childId,stageId)=>{
+    const ts = tasksOfStage(childId,stageId);
+    return ts.length>0 && ts.every(t=>t.status==="done");
+  };
+  const childPct = (childId)=>{
+    const ts = tasksOf(childId); if(!ts.length) return 0;
+    return Math.round(ts.filter(t=>t.status==="done").length / ts.length * 100);
+  };
+
+  // child marks a task -> goes "pending" (awaiting parent approval)
+  const submitTask = (taskId)=>{
+    setDb(d=>({...d, tasks:d.tasks.map(t=>t.id===taskId?{...t,status:t.status==="todo"?"pending":t.status}:t)}));
+  };
+  const undoSubmit = (taskId)=>{
+    setDb(d=>({...d, tasks:d.tasks.map(t=>t.id===taskId&&t.status==="pending"?{...t,status:"todo"}:t)}));
+  };
+
+  // parent approves -> "done", award points, update streak, badges
+  const approveTask = (taskId)=>{
+    setDb(d=>{
+      const task = d.tasks.find(t=>t.id===taskId); if(!task||task.status==="done") return d;
+      const tasks = d.tasks.map(t=>t.id===taskId?{...t,status:"done",completedAt:new Date().toISOString()}:t);
+      const children = d.children.map(c=>{
+        if(c.id!==task.childId) return c;
+        const pts = c.points + task.points;
+        const today = todayStr();
+        let streak = c.streak;
+        if(c.lastDone!==today){
+          const y = new Date(Date.now()-864e5).toISOString().slice(0,10);
+          streak = c.lastDone===y ? c.streak+1 : 1;
+        }
+        const doneCount = tasks.filter(t=>t.childId===c.id&&t.status==="done").length;
+        const doneStages = d.stages.filter(s=>{
+          const st=tasks.filter(t=>t.childId===c.id&&t.stageId===s.id);
+          return st.length>0&&st.every(t=>t.status==="done");
+        }).length;
+        const earned = new Set(c.earnedBadges);
+        BADGES.forEach(b=>{
+          const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : streak;
+          if(val>=b.need) earned.add(b.id);
+        });
+        return {...c, points:pts, level:levelFor(pts), streak, lastDone:today, earnedBadges:[...earned]};
+      });
+      return {...d, tasks, children,
+        activity:[{id:uid(),text:`تم اعتماد مهمة "${task.title}"`,at:new Date().toISOString()},...d.activity].slice(0,200)};
+    });
+  };
+  const rejectTask = (taskId)=>{
+    setDb(d=>({...d, tasks:d.tasks.map(t=>t.id===taskId&&t.status==="pending"?{...t,status:"todo"}:t)}));
+  };
+
+  // parent reverses an approved task -> back to "todo", deduct points, recompute level & badges
+  const unapproveTask = (taskId)=>{
+    setDb(d=>{
+      const task = d.tasks.find(t=>t.id===taskId); if(!task||task.status!=="done") return d;
+      const tasks = d.tasks.map(t=>t.id===taskId?{...t,status:"todo",completedAt:null}:t);
+      const children = d.children.map(c=>{
+        if(c.id!==task.childId) return c;
+        const pts = Math.max(0, c.points - task.points);
+        const doneCount = tasks.filter(t=>t.childId===c.id&&t.status==="done").length;
+        const doneStages = d.stages.filter(s=>{
+          const st=tasks.filter(t=>t.childId===c.id&&t.stageId===s.id);
+          return st.length>0&&st.every(t=>t.status==="done");
+        }).length;
+        // recompute earned badges from the new state (a reversal can revoke a badge)
+        const earned = new Set();
+        BADGES.forEach(b=>{
+          const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : c.streak;
+          if(val>=b.need) earned.add(b.id);
+        });
+        return {...c, points:pts, level:levelFor(pts), earnedBadges:[...earned]};
+      });
+      return {...d, tasks, children,
+        activity:[{id:uid(),text:`تم إزالة اعتماد مهمة "${task.title}"`,at:new Date().toISOString()},...d.activity].slice(0,200)};
+    });
+  };
+
+  // CRUD: children
+  const addChild = (data)=>setDb(d=>({...d,children:[...d.children,{id:uid(),points:0,level:1,streak:0,lastDone:null,earnedBadges:[],...data}]}));
+  const updateChild = (id,data)=>setDb(d=>({...d,children:d.children.map(c=>c.id===id?{...c,...data}:c)}));
+  const removeChild = (id)=>setDb(d=>({...d,children:d.children.filter(c=>c.id!==id),tasks:d.tasks.filter(t=>t.childId!==id)}));
+
+  // CRUD: stages
+  const addStage = (data)=>setDb(d=>({...d,stages:[...d.stages,{id:uid(),order:d.stages.length+1,reward:{title:"",desc:"",type:"experiential",image:null},...data}]}));
+  const updateStage = (id,data)=>setDb(d=>({...d,stages:d.stages.map(s=>s.id===id?{...s,...data}:s)}));
+  const removeStage = (id)=>setDb(d=>({...d,stages:d.stages.filter(s=>s.id!==id),tasks:d.tasks.filter(t=>t.stageId!==id)}));
+
+  // CRUD: tasks
+  const addTask = (data)=>setDb(d=>({...d,tasks:[...d.tasks,{id:uid(),status:"todo",completedAt:null,...data}]}));
+  const updateTask = (id,data)=>setDb(d=>({...d,tasks:d.tasks.map(t=>t.id===id?{...t,...data}:t)}));
+  const removeTask = (id)=>setDb(d=>({...d,tasks:d.tasks.filter(t=>t.id!==id)}));
+
+  const resetAll = ()=>{ const fresh=seedDB(); setDb(fresh); };
+
+  return { db, setDb, ready, log,
+    catById, stageById, childById, tasksOf, tasksOfStage, stagesWithTasks,
+    stageComplete, childPct, submitTask, undoSubmit, approveTask, rejectTask, unapproveTask,
+    addChild, updateChild, removeChild, addStage, updateStage, removeStage,
+    addTask, updateTask, removeTask, resetAll };
+}
+
+/* shared small components */
+function Avatar({child,size=44}){
+  const initials = (child.name||"؟").trim().slice(0,2);
+  const style = {width:size,height:size,fontSize:size*0.4};
+  if(child.photo) return <img className="ava" src={child.photo} style={style} alt={child.name}/>;
+  const grad = {sun:"linear-gradient(135deg,#FFB020,#FF7A6B)",coral:"linear-gradient(135deg,#FF7A6B,#FF5BA0)",
+    mint:"linear-gradient(135deg,#21C1A6,#39A0ED)",primary:"linear-gradient(135deg,#6C63FF,#39A0ED)"}[child.color]||null;
+  return <div className="ava" style={{...style,background:grad}}>{initials}</div>;
+}
+function CatTag({catId,catById}){
+  const c=catById(catId); if(!c) return null;
+  return <span className={`tag tag-${c.color}`}>{c.icon} {c.name}</span>;
+}
+function ProgressBar({pct}){ return <div className="bar"><span style={{width:pct+"%"}}/></div>; }
+
+function Modal({title,onClose,children,wide}){
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" style={wide?{maxWidth:680}:null} onClick={e=>e.stopPropagation()}>
+        <div className="modal-head">
+          <strong style={{fontSize:18}}>{title}</strong>
+          <button className="btn-icon" onClick={onClose} aria-label="إغلاق">✕</button>
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function fireConfetti(){
+  if(typeof confetti!=="function") return;
+  const end = Date.now()+1200;
+  (function frame(){
+    confetti({particleCount:5,angle:60,spread:60,origin:{x:0},colors:["#6C63FF","#21C1A6","#FFB020","#FF7A6B"]});
+    confetti({particleCount:5,angle:120,spread:60,origin:{x:1},colors:["#6C63FF","#21C1A6","#FFB020","#FF7A6B"]});
+    if(Date.now()<end) requestAnimationFrame(frame);
+  })();
+  confetti({particleCount:120,spread:90,origin:{y:0.6}});
+}
+
+
+/* ============================================================
+   شاشة الدخول — Login
+============================================================ */
+function Login({onLogin}){
+  const { db } = useContext(AppCtx);
+  const [mode,setMode] = useState("home"); // home | parent | child
+  const [u,setU]=useState(""),[p,setP]=useState(""),[err,setErr]=useState("");
+
+  const tryParent=()=>{
+    if(u.trim()===db.parent.username && p===db.parent.pass){ onLogin({role:"parent"}); }
+    else setErr("اسم المستخدم أو كلمة المرور غير صحيحة. جرّب: parent / 1234");
+  };
+
+  return (
+    <div className="login-wrap">
+      <div className="login-card col" style={{gap:18}}>
+        <div className="col center" style={{gap:10,textAlign:"center"}}>
+          <div className="logo" style={{width:64,height:64,borderRadius:20,fontSize:36,background:"linear-gradient(135deg,#6C63FF,#39A0ED)",display:"grid",placeItems:"center",color:"#fff",boxShadow:"var(--shadow-lg)"}}>⭐</div>
+          <h1 className="display" style={{fontSize:38,margin:"6px 0 0"}}>نُجوم</h1>
+          <p className="muted" style={{margin:0}}>رحلة الإنجاز والمكافآت لأطفالنا</p>
+        </div>
+
+        {mode==="home" && (
+          <div className="card card-pad col" style={{gap:12}}>
+            <p style={{margin:"0 0 4px",fontWeight:700,textAlign:"center"}}>من يدخل الآن؟</p>
+            <button className="btn btn-primary" style={{justifyContent:"center",fontSize:17,padding:"15px"}} onClick={()=>setMode("child")}>🧒 أنا طفل</button>
+            <button className="btn btn-ghost" style={{justifyContent:"center",fontSize:17,padding:"15px"}} onClick={()=>setMode("parent")}>👨‍👩‍👧 ولي الأمر</button>
+          </div>
+        )}
+
+        {mode==="parent" && (
+          <div className="card card-pad">
+            <div className="field"><label>اسم المستخدم</label>
+              <input value={u} onChange={e=>setU(e.target.value)} placeholder="parent" /></div>
+            <div className="field"><label>كلمة المرور</label>
+              <input type="password" value={p} onChange={e=>setP(e.target.value)} placeholder="••••" onKeyDown={e=>e.key==="Enter"&&tryParent()} /></div>
+            {err && <p style={{color:"var(--coral-d)",fontSize:13.5,margin:"0 0 12px"}}>{err}</p>}
+            <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} onClick={tryParent}>دخول لوحة الإدارة</button>
+            <button className="btn" style={{width:"100%",justifyContent:"center",color:"var(--muted)",marginTop:8}} onClick={()=>{setMode("home");setErr("")}}>رجوع</button>
+          </div>
+        )}
+
+        {mode==="child" && (
+          <div className="card card-pad">
+            <p style={{margin:"0 0 14px",fontWeight:700,textAlign:"center"}}>اختر اسمك 👇</p>
+            <div className="kid-pick">
+              {db.children.map(c=>(
+                <button key={c.id} onClick={()=>onLogin({role:"child",childId:c.id})}>
+                  <Avatar child={c} size={58}/>
+                  <span style={{fontWeight:700,fontSize:14}}>{c.name}</span>
+                </button>
+              ))}
+            </div>
+            {db.children.length===0 && <p className="muted" style={{textAlign:"center"}}>لا يوجد أطفال بعد. اطلب من ولي الأمر إضافتك.</p>}
+            <button className="btn" style={{width:"100%",justifyContent:"center",color:"var(--muted)",marginTop:14}} onClick={()=>setMode("home")}>رجوع</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   بوابة الطفل — Child Portal
+============================================================ */
+function ChildPortal({childId,onLogout}){
+  const S = useContext(AppCtx);
+  const child = S.childById(childId);
+  const [celebrate,setCelebrate] = useState(null); // stage object on reveal
+  const [tab,setTab] = useState("tasks");
+  const prevDone = useRef({});
+
+  if(!child) return <div className="empty">لم يتم العثور على الحساب.</div>;
+
+  const stages = S.stagesWithTasks(childId);
+  const pct = S.childPct(childId);
+  const allTasks = S.tasksOf(childId);
+  const doneCount = allTasks.filter(t=>t.status==="done").length;
+
+  // detect newly completed stage to trigger celebration
+  useEffect(()=>{
+    stages.forEach(s=>{
+      const complete = S.stageComplete(childId,s.id);
+      if(complete && !prevDone.current[s.id]){
+        prevDone.current[s.id]=true;
+        setCelebrate(s);
+        setTimeout(fireConfetti,180);
+      }
+      if(!complete) prevDone.current[s.id]=false;
+    });
+  });
+
+  const onCheck = (task)=>{
+    if(task.status==="todo") S.submitTask(task.id);
+    else if(task.status==="pending") S.undoSubmit(task.id);
+  };
+
+  return (
+    <div className="app">
+      <div className="topbar"><div className="topbar-in">
+        <div className="brand">
+          <Avatar child={child} size={42}/>
+          <div><h1 className="display" style={{fontSize:22}}>مرحباً {child.name}!</h1>
+            <small>هيا نكمل رحلتك ✨</small></div>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onLogout}>خروج</button>
+      </div></div>
+
+      <div className="shell" style={{paddingTop:20}}>
+        {/* hero stats */}
+        <div className="card card-pad" style={{marginBottom:18,background:"linear-gradient(160deg,#fff, rgba(108,99,255,.06))"}}>
+          <div className="row between center wrap" style={{gap:14,marginBottom:16}}>
+            <div className="row center" style={{gap:12}}>
+              <span className="level-pill">🏆 المستوى {child.level}</span>
+              {child.streak>0 && <span className="streak">🔥 {child.streak} {child.streak<=2?"يوم":"أيام"} متتالية</span>}
+            </div>
+            <span className="tag tag-sun" style={{fontSize:15,padding:"7px 15px"}}>⭐ {child.points} نقطة</span>
+          </div>
+          <div className="row between" style={{marginBottom:8,fontWeight:700}}>
+            <span>نسبة إنجازك الكلية</span><span style={{color:"var(--mint-d)"}}>{pct}%</span>
+          </div>
+          <ProgressBar pct={pct}/>
+          <div className="row" style={{gap:18,marginTop:10,fontSize:13.5}}>
+            <span className="muted">المنجز: <strong style={{color:"var(--ink)"}}>{doneCount}</strong></span>
+            <span className="muted">المتبقي: <strong style={{color:"var(--ink)"}}>{allTasks.length-doneCount}</strong></span>
+            <span className="muted">للمستوى التالي: <strong style={{color:"var(--ink)"}}>{50-pointsIntoLevel(child.points)} نقطة</strong></span>
+          </div>
+        </div>
+
+        <div className="tabs" style={{marginBottom:18}}>
+          <button className={`tab ${tab==="tasks"?"on":""}`} onClick={()=>setTab("tasks")}>📋 مهامي</button>
+          <button className={`tab ${tab==="badges"?"on":""}`} onClick={()=>setTab("badges")}>🏅 أوسمتي</button>
+          <button className={`tab ${tab==="stages"?"on":""}`} onClick={()=>setTab("stages")}>🗺️ مراحلي</button>
+        </div>
+
+        {tab==="tasks" && (
+          <div className="col" style={{gap:22}}>
+            {stages.map(s=>{
+              const ts = S.tasksOfStage(childId,s.id);
+              const done = ts.filter(t=>t.status==="done").length;
+              const sc = S.stageComplete(childId,s.id);
+              return (
+                <div key={s.id}>
+                  <div className="row between center" style={{marginBottom:10}}>
+                    <strong style={{fontSize:17}}>{s.name}</strong>
+                    <span className={`tag ${sc?"tag-mint":"tag-muted"}`}>{done}/{ts.length} {sc?"✓ مكتملة":""}</span>
+                  </div>
+                  <div className="col" style={{gap:10}}>
+                    {ts.map(t=>(
+                      <div key={t.id} className={`task ${t.status==="done"?"done":t.status==="pending"?"pending":""}`}>
+                        <button className={`checkbtn ${t.status==="done"?"on":t.status==="pending"?"wait":""}`}
+                          onClick={()=>onCheck(t)} disabled={t.status==="done"}
+                          aria-label="إنجاز المهمة">
+                          {t.status==="done"?"✓":t.status==="pending"?"⏳":""}
+                        </button>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div className="row center wrap" style={{gap:8}}>
+                            <strong style={{fontSize:15.5}}>{t.title}</strong>
+                            <CatTag catId={t.catId} catById={S.catById}/>
+                          </div>
+                          {t.detail && <p className="muted" style={{margin:"3px 0 0",fontSize:13.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.detail}</p>}
+                          {t.status==="pending" && <span style={{fontSize:12.5,color:"var(--sun-d)",fontWeight:700}}>بانتظار موافقة ولي الأمر…</span>}
+                        </div>
+                        <span className="tag tag-sun" style={{flexShrink:0}}>+{t.points}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {stages.length===0 && <div className="empty"><div className="ico">📭</div>لا توجد مهام بعد. سيضيف لك ولي الأمر مهامك قريباً!</div>}
+          </div>
+        )}
+
+        {tab==="badges" && (
+          <div className="grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))"}}>
+            {BADGES.map(b=>{
+              const earned = child.earnedBadges.includes(b.id);
+              return (
+                <div key={b.id} className={`badge ${earned?"earned":"locked"}`}>
+                  <span className="ico">{earned?b.icon:"🔒"}</span>
+                  <span className="nm">{b.name}</span>
+                  {!earned && <span style={{fontSize:11,color:"var(--muted)"}}>
+                    {b.type==="tasks"?`أنجز ${b.need} مهمة`:b.type==="points"?`اجمع ${b.need} نقطة`:b.type==="stages"?`أكمل مرحلة`:`${b.need} أيام متتالية`}
+                  </span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab==="stages" && (
+          <div className="col" style={{gap:14}}>
+            {stages.map(s=>{
+              const ts=S.tasksOfStage(childId,s.id);
+              const done=ts.filter(t=>t.status==="done").length;
+              const p=ts.length?Math.round(done/ts.length*100):0;
+              const sc=S.stageComplete(childId,s.id);
+              return (
+                <div key={s.id} className="card">
+                  <div className="row between center" style={{marginBottom:10}}>
+                    <strong style={{fontSize:16}}>{s.name}</strong>
+                    {sc ? <span className="tag tag-mint">🎉 مكتملة</span> : <span className="tag tag-muted">{p}%</span>}
+                  </div>
+                  <ProgressBar pct={p}/>
+                  <div className="reward-reveal" style={{marginTop:14,padding:"14px 16px",textAlign:"center"}}>
+                    {sc ? (
+                      <div><div style={{fontSize:34}}>🎁</div>
+                        <strong style={{fontSize:16}}>{s.reward.title}</strong>
+                        <p className="muted" style={{margin:"4px 0 0",fontSize:13.5}}>{s.reward.desc}</p></div>
+                    ) : (
+                      <div className="muted"><div style={{fontSize:30}}>🔒</div>
+                        <strong>مكافأة سرية بانتظارك!</strong>
+                        <p style={{margin:"4px 0 0",fontSize:13}}>أكمل كل مهام هذه المرحلة لتكتشفها 🤫</p></div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {celebrate && <CelebrationModal child={child} stage={celebrate} onClose={()=>setCelebrate(null)}/>}
+    </div>
+  );
+}
+
+
+/* ============================================================
+   نافذة الاحتفال وكشف المكافأة — Celebration & reward reveal
+============================================================ */
+function CelebrationModal({child,stage,onClose}){
+  const [showCert,setShowCert] = useState(false);
+  const printCert = ()=>{
+    const w = window.open("","_blank");
+    w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادة إنجاز</title>
+      <style>body{font-family:Tajawal,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#FBF7F0}
+      .c{border:6px double #FFB020;border-radius:20px;padding:54px 64px;text-align:center;background:#fff;max-width:620px}
+      h1{font-size:34px;color:#6C63FF;margin:0 0 6px}.nm{font-size:30px;font-weight:800;margin:18px 0}
+      .r{font-size:20px;color:#159C84;font-weight:700}.d{color:#7C7A88;margin-top:24px;font-size:14px}
+      .seal{font-size:60px}</style></head><body><div class="c">
+      <div class="seal">🏆</div><h1>شهادة إنجاز ومكافأة</h1>
+      <p>تُمنح هذه الشهادة بكل فخر إلى</p><div class="nm">${child.name}</div>
+      <p>لإكماله بنجاح كل مهام</p><div class="r">«${stage.name}»</div>
+      <p style="margin-top:20px">🎁 المكافأة: ${stage.reward.title}</p>
+      <p class="d">منصة نُجوم — ${new Date().toLocaleDateString("ar-EG")}</p></div>
+      <scr`+`ipt>window.print()</scr`+`ipt></body></html>`);
+    w.document.close();
+  };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:520}}>
+        <div className="modal-body">
+          {!showCert ? (
+            <div className="celebrate">
+              <div className="trophy">🏆</div>
+              <h1 className="display" style={{fontSize:32,margin:"6px 0",color:"var(--primary)"}}>أحسنت يا بطل!</h1>
+              <p style={{fontSize:17,margin:"0 0 4px"}}>لقد أكملت كل مهام</p>
+              <strong style={{fontSize:18,color:"var(--mint-d)"}}>{stage.name}</strong>
+
+              <div className="reward-reveal">
+                <span className="tag tag-coral" style={{marginBottom:8}}>🎁 مكافأتك السرية</span>
+                {stage.reward.image && <img src={stage.reward.image} alt="" style={{maxWidth:"100%",borderRadius:14,margin:"8px 0"}}/>}
+                <h2 style={{fontSize:22,margin:"6px 0"}}>{stage.reward.title}</h2>
+                <p className="muted" style={{margin:0}}>{stage.reward.desc}</p>
+              </div>
+
+              <div className="row" style={{gap:10,marginTop:18}}>
+                <button className="btn btn-sun" style={{flex:1,justifyContent:"center"}} onClick={()=>setShowCert(true)}>📜 شهادتي</button>
+                <button className="btn btn-primary" style={{flex:1,justifyContent:"center"}} onClick={onClose}>رائع! 🎉</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="cert">
+                <div className="seal">🏆</div>
+                <h2 className="display" style={{fontSize:26,color:"var(--primary)",margin:"0 0 4px"}}>شهادة إنجاز</h2>
+                <p style={{margin:"6px 0"}}>تُمنح بفخر إلى</p>
+                <div style={{fontSize:26,fontWeight:800,margin:"8px 0"}}>{child.name}</div>
+                <p style={{margin:"6px 0"}}>لإكماله مرحلة</p>
+                <strong style={{color:"var(--mint-d)",fontSize:17}}>{stage.name}</strong>
+                <p className="muted" style={{marginTop:16,fontSize:13}}>{new Date().toLocaleDateString("ar-EG")}</p>
+              </div>
+              <div className="row" style={{gap:10,marginTop:16}}>
+                <button className="btn btn-primary" style={{flex:1,justifyContent:"center"}} onClick={printCert}>🖨️ طباعة الشهادة</button>
+                <button className="btn btn-ghost" style={{flex:1,justifyContent:"center"}} onClick={()=>setShowCert(false)}>رجوع</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ============================================================
+   لوحة ولي الأمر — Parent dashboard
+============================================================ */
+function ParentDashboard({onLogout}){
+  const S = useContext(AppCtx);
+  const [tab,setTab] = useState("overview");
+  const pendingCount = S.db.tasks.filter(t=>t.status==="pending").length;
+  const TABS=[
+    ["overview","🏠 نظرة عامة"],["approve","✅ الاعتماد"+(pendingCount?` (${pendingCount})`:"")],
+    ["children","🧒 الأطفال"],["tasks","📋 المهام"],["stages","🗺️ المراحل والمكافآت"],
+    ["reports","📊 التقارير"],
+  ];
+  return (
+    <div className="app">
+      <div className="topbar"><div className="topbar-in">
+        <div className="brand">
+          <div className="logo">⭐</div>
+          <div><h1 className="display">نُجوم — لوحة الإدارة</h1><small>إدارة العائلة والمهام</small></div>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onLogout}>خروج</button>
+      </div></div>
+      <div className="shell" style={{paddingTop:18}}>
+        <div className="tabs" style={{marginBottom:20}}>
+          {TABS.map(([k,l])=><button key={k} className={`tab ${tab===k?"on":""}`} onClick={()=>setTab(k)}>{l}</button>)}
+        </div>
+        {tab==="overview" && <Overview/>}
+        {tab==="approve"  && <Approvals/>}
+        {tab==="children" && <ChildrenMgr/>}
+        {tab==="tasks"    && <TasksMgr/>}
+        {tab==="stages"   && <StagesMgr/>}
+        {tab==="reports"  && <Reports/>}
+      </div>
+    </div>
+  );
+}
+
+function Overview(){
+  const S = useContext(AppCtx);
+  const kids = S.db.children;
+  const totalTasks = S.db.tasks.length;
+  const doneTasks = S.db.tasks.filter(t=>t.status==="done").length;
+  const pending = S.db.tasks.filter(t=>t.status==="pending").length;
+  const ranking = [...kids].sort((a,b)=>b.points-a.points);
+  return (
+    <div className="col" style={{gap:20}}>
+      <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))"}}>
+        <div className="stat"><div className="n">{kids.length}</div><div className="l">عدد الأطفال</div></div>
+        <div className="stat"><div className="n" style={{color:"var(--mint-d)"}}>{doneTasks}</div><div className="l">مهام منجزة</div></div>
+        <div className="stat"><div className="n" style={{color:"var(--sun-d)"}}>{pending}</div><div className="l">بانتظار الاعتماد</div></div>
+        <div className="stat"><div className="n" style={{color:"var(--primary)"}}>{totalTasks-doneTasks}</div><div className="l">مهام متبقية</div></div>
+      </div>
+
+      <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))"}}>
+        <div className="card card-pad">
+          <strong style={{fontSize:17}}>تقدّم كل طفل</strong>
+          <div className="col" style={{gap:14,marginTop:14}}>
+            {kids.map(c=>{
+              const pct=S.childPct(c.id);
+              const done=S.tasksOf(c.id).filter(t=>t.status==="done").length;
+              const tot=S.tasksOf(c.id).length;
+              return (
+                <div key={c.id} className="row center" style={{gap:12}}>
+                  <Avatar child={c} size={40}/>
+                  <div style={{flex:1}}>
+                    <div className="row between" style={{fontSize:13.5,marginBottom:4}}>
+                      <strong>{c.name}</strong><span className="muted">{done}/{tot} • {pct}%</span>
+                    </div>
+                    <div className="minibar"><span style={{width:pct+"%"}}/></div>
+                  </div>
+                </div>
+              );
+            })}
+            {!kids.length && <p className="muted">أضف أطفالك من تبويب «الأطفال».</p>}
+          </div>
+        </div>
+
+        <div className="card card-pad">
+          <strong style={{fontSize:17}}>🏆 ترتيب الأبطال</strong>
+          <div className="col" style={{gap:10,marginTop:14}}>
+            {ranking.map((c,i)=>(
+              <div key={c.id} className="rank-row">
+                <span className={`rank-n ${i===0?"g":""}`}>{i+1}</span>
+                <Avatar child={c} size={36}/>
+                <strong style={{flex:1}}>{c.name}</strong>
+                <span className="tag tag-sun">⭐ {c.points}</span>
+                <span className="tag tag-primary">م{c.level}</span>
+              </div>
+            ))}
+            {!ranking.length && <p className="muted">لا يوجد بيانات بعد.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="card card-pad">
+        <strong style={{fontSize:17}}>📌 آخر النشاطات</strong>
+        <div className="col" style={{gap:8,marginTop:12}}>
+          {S.db.activity.slice(0,8).map(a=>(
+            <div key={a.id} className="row between" style={{fontSize:13.5,paddingBottom:8,borderBottom:"1px solid var(--line)"}}>
+              <span>{a.text}</span>
+              <span className="muted" style={{fontSize:12}}>{new Date(a.at).toLocaleString("ar-EG",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>
+            </div>
+          ))}
+          {!S.db.activity.length && <p className="muted">لا توجد نشاطات بعد.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Approvals(){
+  const S = useContext(AppCtx);
+  const pending = S.db.tasks.filter(t=>t.status==="pending");
+  const approved = S.db.tasks
+    .filter(t=>t.status==="done")
+    .sort((a,b)=>new Date(b.completedAt||0)-new Date(a.completedAt||0));
+  return (
+    <div className="col" style={{gap:20}}>
+      <div className="card card-pad">
+        <strong style={{fontSize:18}}>المهام بانتظار الاعتماد</strong>
+        <p className="muted" style={{margin:"4px 0 16px",fontSize:14}}>راجع المهام التي أنجزها الأطفال واعتمدها لاحتساب النقاط.</p>
+        <div className="col" style={{gap:12}}>
+          {pending.map(t=>{
+            const c=S.childById(t.childId);
+            return (
+              <div key={t.id} className="task pending">
+                {c && <Avatar child={c} size={38}/>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="row center wrap" style={{gap:8}}>
+                    <strong>{t.title}</strong><CatTag catId={t.catId} catById={S.catById}/>
+                  </div>
+                  <span className="muted" style={{fontSize:13}}>{c?.name} • +{t.points} نقطة</span>
+                </div>
+                <div className="row" style={{gap:8}}>
+                  <button className="btn btn-mint btn-sm" onClick={()=>S.approveTask(t.id)}>✓ اعتماد</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>S.rejectTask(t.id)}>إعادة</button>
+                </div>
+              </div>
+            );
+          })}
+          {!pending.length && <div className="empty"><div className="ico">✅</div>لا توجد مهام بانتظار الاعتماد حالياً.</div>}
+        </div>
+      </div>
+
+      <div className="card card-pad">
+        <strong style={{fontSize:18}}>المهام المعتمدة</strong>
+        <p className="muted" style={{margin:"4px 0 16px",fontSize:14}}>يمكنك إزالة اعتماد أي مهمة لإعادتها وخصم نقاطها تلقائياً.</p>
+        <div className="col" style={{gap:12}}>
+          {approved.map(t=>{
+            const c=S.childById(t.childId);
+            return (
+              <div key={t.id} className="task done">
+                {c && <Avatar child={c} size={38}/>}
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="row center wrap" style={{gap:8}}>
+                    <strong>{t.title}</strong><CatTag catId={t.catId} catById={S.catById}/>
+                  </div>
+                  <span className="muted" style={{fontSize:13}}>{c?.name} • +{t.points} نقطة</span>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={()=>{if(confirm(`إزالة اعتماد "${t.title}" وخصم ${t.points} نقطة؟`))S.unapproveTask(t.id)}}>↩︎ إزالة الاعتماد</button>
+              </div>
+            );
+          })}
+          {!approved.length && <div className="empty"><div className="ico">📋</div>لا توجد مهام معتمدة بعد.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ---- إدارة الأطفال — Children manager ---- */
+function ChildrenMgr(){
+  const S=useContext(AppCtx);
+  const [edit,setEdit]=useState(null); // child obj or {} for new
+  const onSave=(data)=>{ if(data.id) S.updateChild(data.id,data); else S.addChild(data); setEdit(null); };
+  return (
+    <div>
+      <div className="row between center" style={{marginBottom:16}}>
+        <strong style={{fontSize:18}}>الأطفال</strong>
+        <button className="btn btn-primary btn-sm" onClick={()=>setEdit({name:"",age:7,color:"sun",photo:null})}>＋ إضافة طفل</button>
+      </div>
+      <div className="grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))"}}>
+        {S.db.children.map(c=>(
+          <div key={c.id} className="card">
+            <div className="row center" style={{gap:12,marginBottom:12}}>
+              <Avatar child={c} size={52}/>
+              <div style={{flex:1}}><strong style={{fontSize:16}}>{c.name}</strong>
+                <div className="muted" style={{fontSize:13}}>العمر: {c.age} • {S.tasksOf(c.id).length} مهمة</div></div>
+            </div>
+            <div className="row" style={{gap:6,marginBottom:12}}>
+              <span className="tag tag-sun">⭐ {c.points}</span>
+              <span className="tag tag-primary">المستوى {c.level}</span>
+              <span className="tag tag-mint">{S.childPct(c.id)}%</span>
+            </div>
+            <div className="row" style={{gap:8}}>
+              <button className="btn btn-ghost btn-sm" style={{flex:1,justifyContent:"center"}} onClick={()=>setEdit(c)}>✏️ تعديل</button>
+              <button className="btn-icon" onClick={()=>{if(confirm(`حذف ${c.name} وكل مهامه؟`))S.removeChild(c.id)}}>🗑️</button>
+            </div>
+          </div>
+        ))}
+        {!S.db.children.length && <div className="empty" style={{gridColumn:"1/-1"}}><div className="ico">🧒</div>لا يوجد أطفال. أضف أول طفل لبدء الرحلة.</div>}
+      </div>
+      {edit && <ChildForm child={edit} onSave={onSave} onClose={()=>setEdit(null)}/>}
+    </div>
+  );
+}
+function ChildForm({child,onSave,onClose}){
+  const [d,setD]=useState(child);
+  const onPhoto=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>setD(x=>({...x,photo:r.result}));r.readAsDataURL(f);};
+  return (
+    <Modal title={child.id?"تعديل بيانات الطفل":"إضافة طفل جديد"} onClose={onClose}>
+      <div className="row center" style={{gap:14,marginBottom:16}}>
+        <Avatar child={d} size={64}/>
+        <label className="btn btn-ghost btn-sm">📷 رفع صورة<input type="file" accept="image/*" hidden onChange={onPhoto}/></label>
+        {d.photo && <button className="btn-icon" onClick={()=>setD(x=>({...x,photo:null}))}>إزالة</button>}
+      </div>
+      <div className="field"><label>اسم الطفل</label><input value={d.name} onChange={e=>setD({...d,name:e.target.value})} placeholder="مثال: يوسف"/></div>
+      <div className="row" style={{gap:12}}>
+        <div className="field" style={{flex:1}}><label>العمر</label><input type="number" min="3" max="18" value={d.age} onChange={e=>setD({...d,age:+e.target.value})}/></div>
+        <div className="field" style={{flex:1}}><label>اللون المميز</label>
+          <select value={d.color} onChange={e=>setD({...d,color:e.target.value})}>
+            <option value="sun">ذهبي</option><option value="coral">مرجاني</option><option value="mint">نعناعي</option><option value="primary">بنفسجي</option>
+          </select></div>
+      </div>
+      <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",marginTop:6}} disabled={!d.name.trim()} onClick={()=>onSave(d)}>حفظ</button>
+    </Modal>
+  );
+}
+
+/* ---- إدارة المهام — Tasks manager ---- */
+function TasksMgr(){
+  const S=useContext(AppCtx);
+  const [filterChild,setFilterChild]=useState("all");
+  const [edit,setEdit]=useState(null);
+  const list = S.db.tasks.filter(t=>filterChild==="all"||t.childId===filterChild);
+  const onSave=(data)=>{ if(data.id) S.updateTask(data.id,data); else S.addTask(data); setEdit(null); };
+  const statusTag=(s)=>s==="done"?<span className="tag tag-mint">✓ معتمدة</span>:s==="pending"?<span className="tag tag-sun">⏳ بانتظار</span>:<span className="tag tag-muted">لم تبدأ</span>;
+  return (
+    <div>
+      <div className="row between center wrap" style={{marginBottom:16,gap:10}}>
+        <strong style={{fontSize:18}}>المهام</strong>
+        <div className="row center" style={{gap:10}}>
+          <select value={filterChild} onChange={e=>setFilterChild(e.target.value)} style={{padding:"9px 12px",borderRadius:11,border:"1.5px solid var(--line-2)",background:"var(--surface)"}}>
+            <option value="all">كل الأطفال</option>
+            {S.db.children.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <button className="btn btn-primary btn-sm" disabled={!S.db.children.length} onClick={()=>setEdit({childId:S.db.children[0]?.id,stageId:S.db.stages[0]?.id,catId:"quran",title:"",detail:"",points:10})}>＋ مهمة جديدة</button>
+        </div>
+      </div>
+      <div className="col" style={{gap:10}}>
+        {list.map(t=>{
+          const c=S.childById(t.childId), st=S.stageById(t.stageId);
+          return (
+            <div key={t.id} className="card" style={{padding:"14px 16px"}}>
+              <div className="row between center wrap" style={{gap:10}}>
+                <div style={{flex:1,minWidth:200}}>
+                  <div className="row center wrap" style={{gap:8,marginBottom:4}}>
+                    <strong>{t.title}</strong><CatTag catId={t.catId} catById={S.catById}/>{statusTag(t.status)}
+                  </div>
+                  <div className="muted" style={{fontSize:13}}>{c?.name} • {st?.name||"—"} • +{t.points} نقطة</div>
+                  {t.detail && <div className="muted" style={{fontSize:13,marginTop:4}}>{t.detail}</div>}
+                </div>
+                <div className="row" style={{gap:8}}>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setEdit(t)}>✏️</button>
+                  <button className="btn-icon" onClick={()=>{if(confirm("حذف المهمة؟"))S.removeTask(t.id)}}>🗑️</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {!list.length && <div className="empty"><div className="ico">📋</div>لا توجد مهام. أضف أول مهمة.</div>}
+      </div>
+      {edit && <TaskForm task={edit} onSave={onSave} onClose={()=>setEdit(null)}/>}
+    </div>
+  );
+}
+function TaskForm({task,onSave,onClose}){
+  const S=useContext(AppCtx);
+  const [d,setD]=useState(task);
+  return (
+    <Modal title={task.id?"تعديل المهمة":"مهمة جديدة"} onClose={onClose}>
+      <div className="row" style={{gap:12}}>
+        <div className="field" style={{flex:1}}><label>الطفل</label>
+          <select value={d.childId} onChange={e=>setD({...d,childId:e.target.value})}>
+            {S.db.children.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+        <div className="field" style={{flex:1}}><label>المرحلة</label>
+          <select value={d.stageId} onChange={e=>setD({...d,stageId:e.target.value})}>
+            {S.db.stages.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+      </div>
+      <div className="field"><label>الفئة</label>
+        <select value={d.catId} onChange={e=>setD({...d,catId:e.target.value})}>
+          {CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
+      <div className="field"><label>عنوان المهمة</label><input value={d.title} onChange={e=>setD({...d,title:e.target.value})} placeholder="مثال: حفظ سورة الإخلاص"/></div>
+      <div className="field"><label>التفاصيل / النص (آية، حديث، ذكر، دعاء…)</label>
+        <textarea value={d.detail} onChange={e=>setD({...d,detail:e.target.value})} placeholder="اكتب نص الآية أو الحديث أو وصف النشاط هنا…"/></div>
+      <div className="field"><label>عدد النقاط</label><input type="number" min="1" value={d.points} onChange={e=>setD({...d,points:+e.target.value})}/></div>
+      <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} disabled={!d.title.trim()||!d.childId} onClick={()=>onSave(d)}>حفظ المهمة</button>
+    </Modal>
+  );
+}
+
+
+/* ---- إدارة المراحل والمكافآت — Stages & rewards manager ---- */
+function StagesMgr(){
+  const S=useContext(AppCtx);
+  const [edit,setEdit]=useState(null);
+  const onSave=(data)=>{ if(data.id) S.updateStage(data.id,data); else S.addStage(data); setEdit(null); };
+  const rewardType={experiential:"ترفيهية",physical:"عينية",financial:"مالية",educational:"تعليمية"};
+  return (
+    <div>
+      <div className="row between center" style={{marginBottom:16}}>
+        <strong style={{fontSize:18}}>المراحل والمكافآت</strong>
+        <button className="btn btn-primary btn-sm" onClick={()=>setEdit({name:"",order:S.db.stages.length+1,reward:{title:"",desc:"",type:"experiential",image:null}})}>＋ مرحلة جديدة</button>
+      </div>
+      <p className="muted" style={{margin:"0 0 16px",fontSize:14}}>المكافأة تبقى سرية تماماً عن الطفل حتى يُكمل كل مهام المرحلة. 🤫</p>
+      <div className="grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))"}}>
+        {[...S.db.stages].sort((a,b)=>a.order-b.order).map(s=>(
+          <div key={s.id} className="card">
+            <div className="row between center" style={{marginBottom:10}}>
+              <strong style={{fontSize:16}}>{s.name}</strong>
+              <span className="tag tag-muted">ترتيب {s.order}</span>
+            </div>
+            <div className="reward-reveal" style={{padding:"14px 16px",marginTop:0}}>
+              <span className="tag tag-coral" style={{marginBottom:6}}>🎁 {rewardType[s.reward.type]}</span>
+              <strong style={{display:"block",fontSize:15}}>{s.reward.title||"— لم تُحدد مكافأة —"}</strong>
+              {s.reward.desc && <p className="muted" style={{margin:"4px 0 0",fontSize:13}}>{s.reward.desc}</p>}
+            </div>
+            <div className="row" style={{gap:8,marginTop:12}}>
+              <button className="btn btn-ghost btn-sm" style={{flex:1,justifyContent:"center"}} onClick={()=>setEdit(s)}>✏️ تعديل</button>
+              <button className="btn-icon" onClick={()=>{if(confirm("حذف المرحلة وكل مهامها؟"))S.removeStage(s.id)}}>🗑️</button>
+            </div>
+          </div>
+        ))}
+        {!S.db.stages.length && <div className="empty" style={{gridColumn:"1/-1"}}><div className="ico">🗺️</div>لا توجد مراحل بعد.</div>}
+      </div>
+      {edit && <StageForm stage={edit} onSave={onSave} onClose={()=>setEdit(null)}/>}
+    </div>
+  );
+}
+function StageForm({stage,onSave,onClose}){
+  const [d,setD]=useState(stage);
+  const setR=(k,v)=>setD(x=>({...x,reward:{...x.reward,[k]:v}}));
+  const onImg=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>setR("image",r.result);r.readAsDataURL(f);};
+  return (
+    <Modal title={stage.id?"تعديل المرحلة":"مرحلة جديدة"} onClose={onClose}>
+      <div className="row" style={{gap:12}}>
+        <div className="field" style={{flex:2}}><label>اسم المرحلة</label><input value={d.name} onChange={e=>setD({...d,name:e.target.value})} placeholder="مثال: رحلة النور — المرحلة الأولى"/></div>
+        <div className="field" style={{flex:1}}><label>الترتيب</label><input type="number" min="1" value={d.order} onChange={e=>setD({...d,order:+e.target.value})}/></div>
+      </div>
+      <div className="divline"></div>
+      <strong style={{fontSize:15}}>🎁 المكافأة السرية</strong>
+      <div className="field" style={{marginTop:10}}><label>عنوان المكافأة</label><input value={d.reward.title} onChange={e=>setR("title",e.target.value)} placeholder="مثال: رحلة إلى الحديقة المائية"/></div>
+      <div className="field"><label>وصف المكافأة</label><textarea value={d.reward.desc} onChange={e=>setR("desc",e.target.value)} placeholder="اكتب تفاصيل المكافأة…"/></div>
+      <div className="field"><label>نوع المكافأة</label>
+        <select value={d.reward.type} onChange={e=>setR("type",e.target.value)}>
+          <option value="experiential">ترفيهية / تجربة</option><option value="physical">عينية / منتج</option>
+          <option value="financial">مالية</option><option value="educational">تعليمية</option></select></div>
+      <div className="row center" style={{gap:12}}>
+        <label className="btn btn-ghost btn-sm">🖼️ صورة المكافأة<input type="file" accept="image/*" hidden onChange={onImg}/></label>
+        {d.reward.image && <><img src={d.reward.image} alt="" style={{width:54,height:54,borderRadius:10,objectFit:"cover"}}/><button className="btn-icon" onClick={()=>setR("image",null)}>إزالة</button></>}
+      </div>
+      <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",marginTop:14}} disabled={!d.name.trim()} onClick={()=>onSave(d)}>حفظ المرحلة</button>
+    </Modal>
+  );
+}
+
+/* ---- التقارير — Reports ---- */
+function Reports(){
+  const S=useContext(AppCtx);
+  const kids=S.db.children;
+  const catStats = CATEGORIES.map(cat=>{
+    const ts=S.db.tasks.filter(t=>t.catId===cat.id);
+    const done=ts.filter(t=>t.status==="done").length;
+    return {...cat,total:ts.length,done};
+  }).filter(c=>c.total>0);
+  const maxCat = Math.max(1,...catStats.map(c=>c.total));
+
+  const exportCSV=()=>{
+    let rows=[["الطفل","المهمة","الفئة","المرحلة","النقاط","الحالة"]];
+    S.db.tasks.forEach(t=>{
+      const c=S.childById(t.childId),st=S.stageById(t.stageId),cat=S.catById(t.catId);
+      rows.push([c?.name||"",t.title,cat?.name||"",st?.name||"",t.points,
+        t.status==="done"?"معتمدة":t.status==="pending"?"بانتظار":"لم تبدأ"]);
+    });
+    const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${x}"`).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="تقرير_نجوم.csv";a.click();
+  };
+
+  return (
+    <div className="col" style={{gap:20}}>
+      <div className="row between center wrap" style={{gap:10}}>
+        <strong style={{fontSize:18}}>التقارير والتحليلات</strong>
+        <button className="btn btn-mint btn-sm" onClick={exportCSV}>⬇️ تصدير CSV</button>
+      </div>
+
+      <div className="card card-pad">
+        <strong style={{fontSize:16}}>الإنجاز حسب الفئة</strong>
+        <div className="col" style={{gap:14,marginTop:16}}>
+          {catStats.map(c=>(
+            <div key={c.id}>
+              <div className="row between" style={{fontSize:13.5,marginBottom:5}}>
+                <span>{c.icon} {c.name}</span><span className="muted">{c.done}/{c.total}</span>
+              </div>
+              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                <div className="minibar" style={{height:14}}><span style={{width:(c.total/maxCat*100)+"%",background:"rgba(42,42,56,.18)",position:"relative"}}/></div>
+              </div>
+              <div className="minibar" style={{height:10,marginTop:4}}><span style={{width:(c.done/c.total*100)+"%"}}/></div>
+            </div>
+          ))}
+          {!catStats.length && <p className="muted">لا توجد بيانات.</p>}
+        </div>
+      </div>
+
+      <div className="card card-pad">
+        <strong style={{fontSize:16}}>ملخص كل طفل</strong>
+        <div className="col" style={{gap:14,marginTop:14}}>
+          {kids.map(c=>{
+            const ts=S.tasksOf(c.id);
+            const done=ts.filter(t=>t.status==="done").length;
+            const stagesDone=S.db.stages.filter(s=>S.stageComplete(c.id,s.id)).length;
+            return (
+              <div key={c.id} className="card" style={{padding:"14px 16px",boxShadow:"none",background:"var(--bg)"}}>
+                <div className="row center" style={{gap:12,marginBottom:10}}>
+                  <Avatar child={c} size={40}/>
+                  <strong style={{flex:1}}>{c.name}</strong>
+                  <span className="tag tag-primary">المستوى {c.level}</span>
+                </div>
+                <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8}}>
+                  <div className="stat" style={{padding:"10px 12px"}}><div className="n" style={{fontSize:22}}>{c.points}</div><div className="l">نقطة</div></div>
+                  <div className="stat" style={{padding:"10px 12px"}}><div className="n" style={{fontSize:22,color:"var(--mint-d)"}}>{done}</div><div className="l">مهمة منجزة</div></div>
+                  <div className="stat" style={{padding:"10px 12px"}}><div className="n" style={{fontSize:22,color:"var(--sun-d)"}}>{stagesDone}</div><div className="l">مرحلة مكتملة</div></div>
+                  <div className="stat" style={{padding:"10px 12px"}}><div className="n" style={{fontSize:22,color:"var(--coral-d)"}}>{c.earnedBadges.length}</div><div className="l">وسام</div></div>
+                </div>
+              </div>
+            );
+          })}
+          {!kids.length && <p className="muted">لا يوجد أطفال.</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   الجذر — Root App
+============================================================ */
+function App(){
+  const store = useStore();
+  const [session,setSession] = useState(()=>{
+    try{ return JSON.parse(localStorage.getItem(SESS_KEY)||"null"); }catch(e){ return null; }
+  });
+  const login=(s)=>{ setSession(s); localStorage.setItem(SESS_KEY,JSON.stringify(s)); };
+  const logout=()=>{ setSession(null); localStorage.removeItem(SESS_KEY); };
+
+  // شاشة التحميل أثناء جلب البيانات من السحابة
+  if(!store.ready || store.db===null){
+    return (
+      <div className="login-wrap">
+        <div className="col center" style={{gap:14,textAlign:"center"}}>
+          <div className="logo" style={{width:64,height:64,borderRadius:20,fontSize:36,background:"linear-gradient(135deg,#6C63FF,#39A0ED)",display:"grid",placeItems:"center",color:"#fff"}}>⭐</div>
+          <h1 className="display" style={{fontSize:30,margin:0}}>نُجوم</h1>
+          <p className="muted" style={{margin:0}}>جارٍ تحميل بيانات العائلة…</p>
+          {!cloudReady() && <p style={{color:"var(--coral-d)",fontSize:13,maxWidth:320}}>
+            تنبيه: لم يُضبط الاتصال بقاعدة البيانات بعد. التطبيق يعمل محلياً فقط. عدّل ملف <strong>config.js</strong> لتفعيل المزامنة السحابية.</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <AppCtx.Provider value={store}>
+      {!session && <Login onLogin={login}/>}
+      {session?.role==="parent" && <ParentDashboard onLogout={logout}/>}
+      {session?.role==="child" && <ChildPortal childId={session.childId} onLogout={logout}/>}
+    </AppCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
