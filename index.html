@@ -202,7 +202,7 @@ const CATEGORIES = [
   { id:"home",    name:"مهام المنزل",     icon:"🧹", color:"mint"   },
 ];
 
-const BADGES = [
+const DEFAULT_BADGES = [
   { id:"first",   name:"أول خطوة",    icon:"🌱", need:1,   type:"tasks" },
   { id:"ten",     name:"عشر مهام",    icon:"⭐", need:10,  type:"tasks" },
   { id:"fifty",   name:"خمسون مهمة",  icon:"🌟", need:50,  type:"tasks" },
@@ -210,6 +210,12 @@ const BADGES = [
   { id:"streak3", name:"٣ أيام متتالية", icon:"🔥", need:3, type:"streak"},
   { id:"streak7", name:"أسبوع كامل",  icon:"💎", need:7,   type:"streak"},
   { id:"points100",name:"مئة نقطة",   icon:"👑", need:100, type:"points"},
+];
+const BADGE_TYPES = [
+  { id:"tasks",  label:"عدد المهام المنجزة" },
+  { id:"points", label:"عدد النقاط" },
+  { id:"stages", label:"عدد المراحل المكتملة" },
+  { id:"streak", label:"أيام متتالية" },
 ];
 
 function seedDB(){
@@ -245,6 +251,7 @@ function seedDB(){
       mk(k2,stageA,"home","ترتيب الألعاب","ضع ألعابك في صندوقها بعد اللعب.",5),
       mk(k2,stageB,"akhlaq","قول الصدق","تحدث بصدق طوال اليوم.",10),
     ],
+    badges: DEFAULT_BADGES.map(b=>({...b})),
     activity:[],
   };
 }
@@ -254,8 +261,17 @@ const sb = () => window.supabaseClient || null;
 const cloudReady = () => !!sb();
 const STATE_ID = "family";
 
+// يضمن وجود الحقول الجديدة في قواعد البيانات القديمة
+function migrate(db){
+  if(!db) return db;
+  if(!Array.isArray(db.badges)) db.badges = DEFAULT_BADGES.map(b=>({...b}));
+  if(!Array.isArray(db.children)) db.children = [];
+  db.children = db.children.map(c=>({...c, earnedBadges:Array.isArray(c.earnedBadges)?c.earnedBadges:[]}));
+  return db;
+}
+
 function localLoad(){
-  try{ const raw=localStorage.getItem(DB_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  try{ const raw=localStorage.getItem(DB_KEY); if(raw) return migrate(JSON.parse(raw)); }catch(e){}
   const fresh=seedDB(); localStorage.setItem(DB_KEY,JSON.stringify(fresh)); return fresh;
 }
 function localSave(db){ try{ localStorage.setItem(DB_KEY,JSON.stringify(db)); }catch(e){} }
@@ -271,7 +287,7 @@ async function cloudLoad(){
     await c.from("app_state").upsert({id:STATE_ID,data:fresh,updated_at:new Date().toISOString()});
     return fresh;
   }
-  return data.data;
+  return migrate(data.data);
 }
 async function cloudSave(db){
   const c=sb(); if(!c){ localSave(db); return; }
@@ -378,7 +394,7 @@ function useStore(){
           return st.length>0&&st.every(t=>t.status==="done");
         }).length;
         const earned = new Set(c.earnedBadges);
-        BADGES.forEach(b=>{
+        (d.badges||[]).forEach(b=>{
           const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : streak;
           if(val>=b.need) earned.add(b.id);
         });
@@ -407,7 +423,7 @@ function useStore(){
         }).length;
         // recompute earned badges from the new state (a reversal can revoke a badge)
         const earned = new Set();
-        BADGES.forEach(b=>{
+        (d.badges||[]).forEach(b=>{
           const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : c.streak;
           if(val>=b.need) earned.add(b.id);
         });
@@ -433,13 +449,39 @@ function useStore(){
   const updateTask = (id,data)=>setDb(d=>({...d,tasks:d.tasks.map(t=>t.id===id?{...t,...data}:t)}));
   const removeTask = (id)=>setDb(d=>({...d,tasks:d.tasks.filter(t=>t.id!==id)}));
 
+  // إعادة حساب الأوسمة المكتسبة لكل طفل بناءً على قائمة الأوسمة الحالية
+  const recomputeAllBadges = (d)=>{
+    const children = d.children.map(c=>{
+      const doneCount = d.tasks.filter(t=>t.childId===c.id&&t.status==="done").length;
+      const pts = c.points;
+      const doneStages = d.stages.filter(s=>{
+        const st=d.tasks.filter(t=>t.childId===c.id&&t.stageId===s.id);
+        return st.length>0&&st.every(t=>t.status==="done");
+      }).length;
+      const earned = new Set();
+      (d.badges||[]).forEach(b=>{
+        const val = b.type==="tasks"?doneCount : b.type==="points"?pts : b.type==="stages"?doneStages : c.streak;
+        if(val>=b.need) earned.add(b.id);
+      });
+      return {...c, earnedBadges:[...earned]};
+    });
+    return {...d, children};
+  };
+
+  // CRUD: badges (الأوسمة) — متاحة لمدير النظام
+  const addBadge = (data)=>setDb(d=>recomputeAllBadges({...d,badges:[...(d.badges||[]),{id:uid(),icon:"🏅",type:"tasks",need:1,name:"",...data}]}));
+  const updateBadge = (id,data)=>setDb(d=>recomputeAllBadges({...d,badges:(d.badges||[]).map(b=>b.id===id?{...b,...data}:b)}));
+  const removeBadge = (id)=>setDb(d=>({...d,
+    badges:(d.badges||[]).filter(b=>b.id!==id),
+    children:d.children.map(c=>({...c,earnedBadges:(c.earnedBadges||[]).filter(x=>x!==id)}))}));
+
   const resetAll = ()=>{ const fresh=seedDB(); setDb(fresh); };
 
   return { db, setDb, ready, log,
     catById, stageById, childById, tasksOf, tasksOfStage, stagesWithTasks,
     stageComplete, childPct, submitTask, undoSubmit, approveTask, rejectTask, unapproveTask,
     addChild, updateChild, removeChild, addStage, updateStage, removeStage,
-    addTask, updateTask, removeTask, resetAll };
+    addTask, updateTask, removeTask, addBadge, updateBadge, removeBadge, resetAll };
 }
 
 /* shared small components */
@@ -667,7 +709,7 @@ function ChildPortal({childId,onLogout}){
 
         {tab==="badges" && (
           <div className="grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))"}}>
-            {BADGES.map(b=>{
+            {(S.db.badges||[]).map(b=>{
               const earned = child.earnedBadges.includes(b.id);
               return (
                 <div key={b.id} className={`badge ${earned?"earned":"locked"}`}>
@@ -679,6 +721,7 @@ function ChildPortal({childId,onLogout}){
                 </div>
               );
             })}
+            {!(S.db.badges||[]).length && <div className="empty" style={{gridColumn:"1/-1"}}><div className="ico">🏅</div>لا توجد أوسمة بعد.</div>}
           </div>
         )}
 
@@ -800,7 +843,7 @@ function ParentDashboard({onLogout}){
   const TABS=[
     ["overview","🏠 نظرة عامة"],["approve","✅ الاعتماد"+(pendingCount?` (${pendingCount})`:"")],
     ["children","🧒 الأطفال"],["tasks","📋 المهام"],["stages","🗺️ المراحل والمكافآت"],
-    ["reports","📊 التقارير"],
+    ["badges","🏅 الأوسمة"],["reports","📊 التقارير"],
   ];
   return (
     <div className="app">
@@ -820,6 +863,7 @@ function ParentDashboard({onLogout}){
         {tab==="children" && <ChildrenMgr/>}
         {tab==="tasks"    && <TasksMgr/>}
         {tab==="stages"   && <StagesMgr/>}
+        {tab==="badges"   && <BadgesMgr/>}
         {tab==="reports"  && <Reports/>}
       </div>
       <Footer/>
@@ -1153,6 +1197,89 @@ function StageForm({stage,onSave,onClose}){
         {d.reward.image && <><img src={d.reward.image} alt="" style={{width:54,height:54,borderRadius:10,objectFit:"cover"}}/><button className="btn-icon" onClick={()=>setR("image",null)}>إزالة</button></>}
       </div>
       <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",marginTop:14}} disabled={!d.name.trim()} onClick={()=>onSave(d)}>حفظ المرحلة</button>
+    </Modal>
+  );
+}
+
+/* ---- إدارة الأوسمة — Badges manager ---- */
+function badgeRule(b){
+  return b.type==="tasks"?`عند إنجاز ${b.need} مهمة`
+    :b.type==="points"?`عند جمع ${b.need} نقطة`
+    :b.type==="stages"?`عند إكمال ${b.need} مرحلة`
+    :`عند ${b.need} أيام متتالية`;
+}
+function BadgesMgr(){
+  const S=useContext(AppCtx);
+  const [edit,setEdit]=useState(null);
+  const badges=S.db.badges||[];
+  const onSave=(data)=>{ if(data.id) S.updateBadge(data.id,data); else S.addBadge(data); setEdit(null); };
+  return (
+    <div>
+      <div className="row between center" style={{marginBottom:16}}>
+        <strong style={{fontSize:18}}>الأوسمة والإنجازات</strong>
+        <button className="btn btn-primary btn-sm" onClick={()=>setEdit({name:"",icon:"🏅",type:"tasks",need:1})}>＋ وسام جديد</button>
+      </div>
+      <p className="muted" style={{margin:"0 0 16px",fontSize:14}}>أنشئ أوسمة تُمنح للأطفال تلقائياً عند بلوغ الشرط. أي تعديل يُعيد حساب الأوسمة المكتسبة فوراً.</p>
+      <div className="grid" style={{gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))"}}>
+        {badges.map(b=>{
+          const holders=S.db.children.filter(c=>(c.earnedBadges||[]).includes(b.id)).length;
+          return (
+            <div key={b.id} className="card">
+              <div className="row center" style={{gap:12,marginBottom:10}}>
+                <div className="badge earned" style={{width:60,height:60,aspectRatio:"auto",padding:0,flexShrink:0}}>
+                  <span className="ico" style={{fontSize:30}}>{b.icon}</span>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <strong style={{fontSize:15}}>{b.name||"— بلا اسم —"}</strong>
+                  <div className="muted" style={{fontSize:12.5}}>{badgeRule(b)}</div>
+                </div>
+              </div>
+              <div className="row between center" style={{marginBottom:10}}>
+                <span className="tag tag-mint">{holders} حصل عليه</span>
+              </div>
+              <div className="row" style={{gap:8}}>
+                <button className="btn btn-ghost btn-sm" style={{flex:1,justifyContent:"center"}} onClick={()=>setEdit(b)}>✏️ تعديل</button>
+                <button className="btn-icon" onClick={()=>{if(confirm("حذف الوسام؟"))S.removeBadge(b.id)}}>🗑️</button>
+              </div>
+            </div>
+          );
+        })}
+        {!badges.length && <div className="empty" style={{gridColumn:"1/-1"}}><div className="ico">🏅</div>لا توجد أوسمة. أضف أول وسام.</div>}
+      </div>
+      {edit && <BadgeForm badge={edit} onSave={onSave} onClose={()=>setEdit(null)}/>}
+    </div>
+  );
+}
+function BadgeForm({badge,onSave,onClose}){
+  const [d,setD]=useState(badge);
+  const EMOJIS=["🏅","⭐","🌟","🌱","🔥","💎","👑","🏆","🥇","🎖️","📚","🕌","🌙","🤲","💛","🚀","🦁","🌈"];
+  return (
+    <Modal title={badge.id?"تعديل الوسام":"وسام جديد"} onClose={onClose}>
+      <div className="row center" style={{gap:14,marginBottom:8}}>
+        <div className="badge earned" style={{width:64,height:64,aspectRatio:"auto",padding:0}}>
+          <span className="ico" style={{fontSize:34}}>{d.icon}</span>
+        </div>
+        <div className="muted" style={{fontSize:13}}>معاينة الوسام</div>
+      </div>
+      <div className="field"><label>اسم الوسام</label>
+        <input value={d.name} onChange={e=>setD({...d,name:e.target.value})} placeholder="مثال: بطل الحفظ"/></div>
+      <div className="field"><label>الأيقونة</label>
+        <div className="row wrap" style={{gap:6}}>
+          {EMOJIS.map(em=>(
+            <button key={em} onClick={()=>setD({...d,icon:em})}
+              style={{fontSize:24,padding:"6px 9px",borderRadius:10,border:d.icon===em?"2px solid var(--primary)":"1.5px solid var(--line-2)",background:d.icon===em?"rgba(108,99,255,.1)":"var(--surface)"}}>{em}</button>
+          ))}
+        </div>
+      </div>
+      <div className="row" style={{gap:12}}>
+        <div className="field" style={{flex:2}}><label>شرط الحصول عليه</label>
+          <select value={d.type} onChange={e=>setD({...d,type:e.target.value})}>
+            {BADGE_TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
+        <div className="field" style={{flex:1}}><label>القيمة المطلوبة</label>
+          <input type="number" min="1" value={d.need} onChange={e=>setD({...d,need:Math.max(1,+e.target.value||1)})}/></div>
+      </div>
+      <div className="tag tag-muted" style={{marginBottom:14}}>📌 {badgeRule(d)}</div>
+      <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} disabled={!d.name.trim()} onClick={()=>onSave(d)}>حفظ الوسام</button>
     </Modal>
   );
 }
