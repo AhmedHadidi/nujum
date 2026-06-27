@@ -269,6 +269,7 @@ function seedDB(){
       mk(k2,stageB,"akhlaq","قول الصدق","تحدث بصدق طوال اليوم.",10),
     ],
     badges: DEFAULT_BADGES.map(b=>({...b})),
+    certificates: [],
     activity:[],
   };
 }
@@ -282,6 +283,7 @@ const STATE_ID = "family";
 function migrate(db){
   if(!db) return db;
   if(!Array.isArray(db.badges)) db.badges = DEFAULT_BADGES.map(b=>({...b}));
+  if(!Array.isArray(db.certificates)) db.certificates = [];
   if(!Array.isArray(db.children)) db.children = [];
   db.children = db.children.map(c=>({...c, earnedBadges:Array.isArray(c.earnedBadges)?c.earnedBadges:[]}));
   return db;
@@ -382,6 +384,17 @@ function useStore(){
     const ts = tasksOf(childId); if(!ts.length) return 0;
     return Math.round(ts.filter(t=>t.status==="done").length / ts.length * 100);
   };
+  // عدد المراحل المكتملة للطفل
+  const stagesDoneCount = (childId)=>stagesWithTasks(childId).filter(s=>stageComplete(childId,s.id)).length;
+  // المرحلة النشطة الحالية (أول مرحلة غير مكتملة) أو null إذا أكمل الكل
+  const activeStage = (childId)=>stagesWithTasks(childId).find(s=>!stageComplete(childId,s.id)) || null;
+  // نسبة الإنجاز داخل المرحلة النشطة (أو 100 إذا أكمل كل المراحل)
+  const activeStagePct = (childId)=>{
+    const s = activeStage(childId);
+    if(!s) return 100;
+    const ts = tasksOfStage(childId,s.id); if(!ts.length) return 0;
+    return Math.round(ts.filter(t=>t.status==="done").length / ts.length * 100);
+  };
 
   // child marks a task -> goes "pending" (awaiting parent approval)
   const submitTask = (taskId)=>{
@@ -475,13 +488,31 @@ function useStore(){
     badges:(d.badges||[]).filter(b=>b.id!==id),
     children:d.children.map(c=>({...c,earnedBadges:(c.earnedBadges||[]).filter(x=>x!==id)}))}));
 
+  // تسجيل شهادة عند إكمال مرحلة (مرة واحدة لكل طفل+مرحلة)
+  const saveCertificate = (childId, stage)=>{
+    setDb(d=>{
+      const exists = (d.certificates||[]).some(c=>c.childId===childId && c.stageId===stage.id);
+      if(exists) return d;
+      const cert = {
+        id: uid(), childId, stageId: stage.id,
+        stageName: stage.name,
+        rewardTitle: stage.reward ? stage.reward.title : "",
+        date: new Date().toISOString(),
+      };
+      return {...d, certificates:[cert, ...(d.certificates||[])]};
+    });
+  };
+  const certsOf = (childId)=>(db.certificates||[]).filter(c=>c.childId===childId)
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+
   const resetAll = ()=>{ const fresh=seedDB(); setDb(fresh); };
 
   return { db, setDb, ready, log,
     catById, stageById, childById, tasksOf, tasksOfStage, stagesWithTasks,
-    stageComplete, childPct, submitTask, undoSubmit, approveTask, rejectTask, unapproveTask,
+    stageComplete, childPct, stagesDoneCount, activeStage, activeStagePct, submitTask, undoSubmit, approveTask, rejectTask, unapproveTask,
     addChild, updateChild, removeChild, addStage, updateStage, removeStage,
-    addTask, updateTask, removeTask, addBadge, updateBadge, removeBadge, resetAll };
+    addTask, updateTask, removeTask, addBadge, updateBadge, removeBadge,
+    saveCertificate, certsOf, resetAll };
 }
 
 /* shared small components */
@@ -603,25 +634,43 @@ function ChildPortal({childId,onLogout}){
   const child = S.childById(childId);
   const [celebrate,setCelebrate] = useState(null); // stage object on reveal
   const [tab,setTab] = useState("tasks");
-  const prevDone = useRef({});
+  const [openStages,setOpenStages] = useState({}); // toggle state for collapsible stages
+  const seenRef = useRef(null); // tracks which completed stages we've already reacted to
 
   if(!child) return <div className="empty">لم يتم العثور على الحساب.</div>;
 
-  const stages = S.stagesWithTasks(childId);
-  const pct = S.childPct(childId);
+  // المراحل من الأحدث إلى الأقدم (المرحلة الأعلى ترتيباً أولاً)
+  const stages = [...S.stagesWithTasks(childId)].sort((a,b)=>b.order-a.order);
   const allTasks = S.tasksOf(childId);
   const doneCount = allTasks.filter(t=>t.status==="done").length;
+  const stagesDone = S.stagesDoneCount(childId);
+  const totalStages = S.stagesWithTasks(childId).length;
+  const active = S.activeStage(childId);
+  const activePct = S.activeStagePct(childId);
 
-  // detect newly completed stage to trigger celebration
+  // اكتشاف اكتمال مرحلة جديدة: نحتفل مرة واحدة فقط ونحفظ الشهادة.
+  // نعتمد على وجود شهادة مسجّلة لتفادي تكرار النافذة المزعجة.
   useEffect(()=>{
-    stages.forEach(s=>{
+    const certIds = new Set((S.db.certificates||[]).filter(c=>c.childId===childId).map(c=>c.stageId));
+    // التهيئة الأولى: سجّل ما هو مكتمل مسبقاً دون احتفال
+    if(seenRef.current===null){
+      seenRef.current = new Set();
+      S.stagesWithTasks(childId).forEach(s=>{
+        if(S.stageComplete(childId,s.id)) seenRef.current.add(s.id);
+      });
+      return;
+    }
+    S.stagesWithTasks(childId).forEach(s=>{
       const complete = S.stageComplete(childId,s.id);
-      if(complete && !prevDone.current[s.id]){
-        prevDone.current[s.id]=true;
-        setCelebrate(s);
-        setTimeout(fireConfetti,180);
+      if(complete && !seenRef.current.has(s.id)){
+        seenRef.current.add(s.id);
+        S.saveCertificate(childId,s);          // حفظ الشهادة دائماً
+        if(!certIds.has(s.id)){                 // الاحتفال فقط إن لم يُحتفل بها من قبل
+          setCelebrate(s);
+          setTimeout(fireConfetti,180);
+        }
       }
-      if(!complete) prevDone.current[s.id]=false;
+      if(!complete) seenRef.current.delete(s.id);
     });
   });
 
@@ -629,6 +678,7 @@ function ChildPortal({childId,onLogout}){
     if(task.status==="todo") S.submitTask(task.id);
     else if(task.status==="pending") S.undoSubmit(task.id);
   };
+  const toggleStage = (id)=>setOpenStages(o=>({...o,[id]:!o[id]}));
 
   return (
     <div className="app">
@@ -651,13 +701,31 @@ function ChildPortal({childId,onLogout}){
             </div>
             <span className="tag tag-sun" style={{fontSize:15,padding:"7px 15px"}}>⭐ {child.points} نقطة</span>
           </div>
-          <div className="row between" style={{marginBottom:8,fontWeight:700}}>
-            <span>نسبة إنجازك الكلية</span><span style={{color:"var(--mint-d)"}}>{pct}%</span>
+
+          {/* المراحل المكتملة كرقم بارز */}
+          <div className="row center wrap" style={{gap:10,marginBottom:14}}>
+            <span className="tag tag-mint" style={{fontSize:14,padding:"7px 14px"}}>🏁 أكملت {stagesDone} من {totalStages} مرحلة</span>
+            {!active && totalStages>0 && <span className="tag tag-primary" style={{fontSize:14,padding:"7px 14px"}}>🎉 أكملت كل المراحل!</span>}
           </div>
-          <ProgressBar pct={pct}/>
-          <div className="row" style={{gap:18,marginTop:10,fontSize:13.5}}>
-            <span className="muted">المنجز: <strong style={{color:"var(--ink)"}}>{doneCount}</strong></span>
-            <span className="muted">المتبقي: <strong style={{color:"var(--ink)"}}>{allTasks.length-doneCount}</strong></span>
+
+          {active ? (
+            <div>
+              <div className="row between" style={{marginBottom:8,fontWeight:700}}>
+                <span>تقدّمك في: {active.name}</span><span style={{color:"var(--mint-d)"}}>{activePct}%</span>
+              </div>
+              <ProgressBar pct={activePct}/>
+            </div>
+          ) : (totalStages>0 && (
+            <div>
+              <div className="row between" style={{marginBottom:8,fontWeight:700}}>
+                <span>رحلتك مكتملة 🌟</span><span style={{color:"var(--mint-d)"}}>100%</span>
+              </div>
+              <ProgressBar pct={100}/>
+            </div>
+          ))}
+
+          <div className="row wrap" style={{gap:18,marginTop:10,fontSize:13.5}}>
+            <span className="muted">المهام المنجزة: <strong style={{color:"var(--ink)"}}>{doneCount}</strong></span>
             <span className="muted">للمستوى التالي: <strong style={{color:"var(--ink)"}}>{50-pointsIntoLevel(child.points)} نقطة</strong></span>
           </div>
         </div>
@@ -666,40 +734,48 @@ function ChildPortal({childId,onLogout}){
           <button className={`tab ${tab==="tasks"?"on":""}`} onClick={()=>setTab("tasks")}>📋 مهامي</button>
           <button className={`tab ${tab==="badges"?"on":""}`} onClick={()=>setTab("badges")}>🏅 أوسمتي</button>
           <button className={`tab ${tab==="stages"?"on":""}`} onClick={()=>setTab("stages")}>🗺️ مراحلي</button>
+          <button className={`tab ${tab==="certs"?"on":""}`} onClick={()=>setTab("certs")}>📜 شهاداتي</button>
         </div>
 
         {tab==="tasks" && (
-          <div className="col" style={{gap:22}}>
+          <div className="col" style={{gap:16}}>
             {stages.map(s=>{
               const ts = S.tasksOfStage(childId,s.id);
               const done = ts.filter(t=>t.status==="done").length;
               const sc = S.stageComplete(childId,s.id);
+              const isOpen = sc ? !!openStages[s.id] : true; // المكتملة مطويّة افتراضياً
               return (
-                <div key={s.id}>
-                  <div className="row between center" style={{marginBottom:10}}>
-                    <strong style={{fontSize:17}}>{s.name}</strong>
+                <div key={s.id} className="card" style={{padding:sc?"6px 16px":"16px",background:sc?"rgba(33,193,166,.05)":"var(--surface)"}}>
+                  <div className="row between center" style={{cursor:sc?"pointer":"default",padding:sc?"10px 0":"0 0 10px"}}
+                    onClick={()=>sc&&toggleStage(s.id)}>
+                    <div className="row center" style={{gap:8}}>
+                      {sc && <span style={{fontSize:14,color:"var(--muted)",transition:".2s",display:"inline-block",transform:isOpen?"rotate(90deg)":"none"}}>◀</span>}
+                      <strong style={{fontSize:16}}>{s.name}</strong>
+                    </div>
                     <span className={`tag ${sc?"tag-mint":"tag-muted"}`}>{done}/{ts.length} {sc?"✓ مكتملة":""}</span>
                   </div>
-                  <div className="col" style={{gap:10}}>
-                    {ts.map(t=>(
-                      <div key={t.id} className={`task ${t.status==="done"?"done":t.status==="pending"?"pending":""}`}>
-                        <button className={`checkbtn ${t.status==="done"?"on":t.status==="pending"?"wait":""}`}
-                          onClick={()=>onCheck(t)} disabled={t.status==="done"}
-                          aria-label="إنجاز المهمة">
-                          {t.status==="done"?"✓":t.status==="pending"?"⏳":""}
-                        </button>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div className="row center wrap" style={{gap:8}}>
-                            <strong style={{fontSize:15.5}}>{t.title}</strong>
-                            <CatTag catId={t.catId} catById={S.catById}/>
+                  {isOpen && (
+                    <div className="col" style={{gap:10,paddingBottom:sc?12:0}}>
+                      {ts.map(t=>(
+                        <div key={t.id} className={`task ${t.status==="done"?"done":t.status==="pending"?"pending":""}`}>
+                          <button className={`checkbtn ${t.status==="done"?"on":t.status==="pending"?"wait":""}`}
+                            onClick={()=>onCheck(t)} disabled={t.status==="done"}
+                            aria-label="إنجاز المهمة">
+                            {t.status==="done"?"✓":t.status==="pending"?"⏳":""}
+                          </button>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div className="row center wrap" style={{gap:8}}>
+                              <strong style={{fontSize:15.5}}>{t.title}</strong>
+                              <CatTag catId={t.catId} catById={S.catById}/>
+                            </div>
+                            {t.detail && <p className="muted" style={{margin:"3px 0 0",fontSize:13.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.detail}</p>}
+                            {t.status==="pending" && <span style={{fontSize:12.5,color:"var(--sun-d)",fontWeight:700}}>بانتظار موافقة ولي الأمر…</span>}
                           </div>
-                          {t.detail && <p className="muted" style={{margin:"3px 0 0",fontSize:13.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.detail}</p>}
-                          {t.status==="pending" && <span style={{fontSize:12.5,color:"var(--sun-d)",fontWeight:700}}>بانتظار موافقة ولي الأمر…</span>}
+                          <span className="tag tag-sun" style={{flexShrink:0}}>+{t.points}</span>
                         </div>
-                        <span className="tag tag-sun" style={{flexShrink:0}}>+{t.points}</span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -755,6 +831,15 @@ function ChildPortal({childId,onLogout}){
             })}
           </div>
         )}
+
+        {tab==="certs" && (
+          <div className="col" style={{gap:14}}>
+            {S.certsOf(childId).map(cert=>(
+              <CertCard key={cert.id} cert={cert} child={child}/>
+            ))}
+            {!S.certsOf(childId).length && <div className="empty"><div className="ico">📜</div>لا توجد شهادات بعد. أكمل مرحلة كاملة لتحصل على شهادتك الأولى!</div>}
+          </div>
+        )}
       </div>
 
       <Footer/>
@@ -767,23 +852,51 @@ function ChildPortal({childId,onLogout}){
 /* ============================================================
    نافذة الاحتفال وكشف المكافأة — Celebration & reward reveal
 ============================================================ */
+// طباعة شهادة (مشتركة بين نافذة الاحتفال وصفحة الشهادات)
+function printCertificate({childName, stageName, rewardTitle, dateStr}){
+  const w = window.open("","_blank");
+  if(!w) return;
+  w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادة إنجاز</title>
+    <style>body{font-family:Tajawal,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#FBF7F0}
+    .c{border:6px double #FFB020;border-radius:20px;padding:54px 64px;text-align:center;background:#fff;max-width:620px}
+    h1{font-size:34px;color:#6C63FF;margin:0 0 6px}.nm{font-size:30px;font-weight:800;margin:18px 0}
+    .r{font-size:20px;color:#159C84;font-weight:700}.d{color:#7C7A88;margin-top:24px;font-size:14px}
+    .seal{font-size:60px}</style></head><body><div class="c">
+    <div class="seal">🏆</div><h1>شهادة إنجاز ومكافأة</h1>
+    <p>تُمنح هذه الشهادة بكل فخر إلى</p><div class="nm">${childName}</div>
+    <p>لإكماله بنجاح كل مهام</p><div class="r">«${stageName}»</div>
+    ${rewardTitle?`<p style="margin-top:20px">🎁 المكافأة: ${rewardTitle}</p>`:""}
+    <p class="d">منصة رحلة العباقرة — ${dateStr}</p></div>
+    <scr`+`ipt>window.print()</scr`+`ipt></body></html>`);
+  w.document.close();
+}
+
+// بطاقة شهادة في صفحة شهادات الطفل
+function CertCard({cert,child}){
+  const dateStr = new Date(cert.date).toLocaleDateString("ar-EG");
+  return (
+    <div className="cert">
+      <div className="seal">🏆</div>
+      <h2 className="display" style={{fontSize:24,color:"var(--primary)",margin:"0 0 4px"}}>شهادة إنجاز</h2>
+      <p style={{margin:"6px 0"}}>تُمنح بفخر إلى</p>
+      <div style={{fontSize:24,fontWeight:800,margin:"6px 0"}}>{child.name}</div>
+      <p style={{margin:"6px 0"}}>لإكماله مرحلة</p>
+      <strong style={{color:"var(--mint-d)",fontSize:16}}>{cert.stageName}</strong>
+      {cert.rewardTitle && <p style={{margin:"10px 0 0",fontSize:14}}>🎁 {cert.rewardTitle}</p>}
+      <p className="muted" style={{marginTop:12,fontSize:12.5}}>{dateStr}</p>
+      <button className="btn btn-primary btn-sm" style={{marginTop:14}}
+        onClick={()=>printCertificate({childName:child.name,stageName:cert.stageName,rewardTitle:cert.rewardTitle,dateStr})}>
+        🖨️ طباعة الشهادة
+      </button>
+    </div>
+  );
+}
+
 function CelebrationModal({child,stage,onClose}){
   const [showCert,setShowCert] = useState(false);
   const printCert = ()=>{
-    const w = window.open("","_blank");
-    w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادة إنجاز</title>
-      <style>body{font-family:Tajawal,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#FBF7F0}
-      .c{border:6px double #FFB020;border-radius:20px;padding:54px 64px;text-align:center;background:#fff;max-width:620px}
-      h1{font-size:34px;color:#6C63FF;margin:0 0 6px}.nm{font-size:30px;font-weight:800;margin:18px 0}
-      .r{font-size:20px;color:#159C84;font-weight:700}.d{color:#7C7A88;margin-top:24px;font-size:14px}
-      .seal{font-size:60px}</style></head><body><div class="c">
-      <div class="seal">🏆</div><h1>شهادة إنجاز ومكافأة</h1>
-      <p>تُمنح هذه الشهادة بكل فخر إلى</p><div class="nm">${child.name}</div>
-      <p>لإكماله بنجاح كل مهام</p><div class="r">«${stage.name}»</div>
-      <p style="margin-top:20px">🎁 المكافأة: ${stage.reward.title}</p>
-      <p class="d">منصة رحلة العباقرة — ${new Date().toLocaleDateString("ar-EG")}</p></div>
-      <scr`+`ipt>window.print()</scr`+`ipt></body></html>`);
-    w.document.close();
+    printCertificate({childName:child.name, stageName:stage.name,
+      rewardTitle:stage.reward?stage.reward.title:"", dateStr:new Date().toLocaleDateString("ar-EG")});
   };
 
   return (
@@ -808,6 +921,7 @@ function CelebrationModal({child,stage,onClose}){
                 <button className="btn btn-sun" style={{flex:1,justifyContent:"center"}} onClick={()=>setShowCert(true)}>📜 شهادتي</button>
                 <button className="btn btn-primary" style={{flex:1,justifyContent:"center"}} onClick={onClose}>رائع! 🎉</button>
               </div>
+              <p className="muted" style={{fontSize:12.5,marginTop:12,marginBottom:0}}>💾 حُفظت شهادتك في «📜 شهاداتي» — لن تظهر هذه الرسالة مرة أخرى.</p>
             </div>
           ) : (
             <div>
@@ -890,19 +1004,33 @@ function Overview(){
       <div className="grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))"}}>
         <div className="card card-pad">
           <strong style={{fontSize:17}}>تقدّم كل طفل</strong>
-          <div className="col" style={{gap:14,marginTop:14}}>
+          <div className="col" style={{gap:16,marginTop:14}}>
             {kids.map(c=>{
-              const pct=S.childPct(c.id);
-              const done=S.tasksOf(c.id).filter(t=>t.status==="done").length;
-              const tot=S.tasksOf(c.id).length;
+              const sDone=S.stagesDoneCount(c.id);
+              const sTotal=S.stagesWithTasks(c.id).length;
+              const active=S.activeStage(c.id);
+              const aPct=S.activeStagePct(c.id);
               return (
                 <div key={c.id} className="row center" style={{gap:12}}>
                   <Avatar child={c} size={40}/>
-                  <div style={{flex:1}}>
-                    <div className="row between" style={{fontSize:13.5,marginBottom:4}}>
-                      <strong>{c.name}</strong><span className="muted">{done}/{tot} • {pct}%</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div className="row between center" style={{fontSize:13.5,marginBottom:4,gap:8}}>
+                      <strong>{c.name}</strong>
+                      <span className="tag tag-mint" style={{fontSize:11.5,padding:"2px 8px"}}>🏁 {sDone}/{sTotal} مرحلة</span>
                     </div>
-                    <div className="minibar"><span style={{width:pct+"%"}}/></div>
+                    {active ? (
+                      <>
+                        <div className="row between" style={{fontSize:12,marginBottom:3}}>
+                          <span className="muted" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{active.name}</span>
+                          <span className="muted">{aPct}%</span>
+                        </div>
+                        <div className="minibar"><span style={{width:aPct+"%"}}/></div>
+                      </>
+                    ) : sTotal>0 ? (
+                      <div className="tag tag-primary" style={{fontSize:11.5}}>🎉 أكمل كل المراحل</div>
+                    ) : (
+                      <span className="muted" style={{fontSize:12}}>لا توجد مهام بعد</span>
+                    )}
                   </div>
                 </div>
               );
@@ -919,8 +1047,8 @@ function Overview(){
                 <span className={`rank-n ${i===0?"g":""}`}>{i+1}</span>
                 <Avatar child={c} size={36}/>
                 <strong style={{flex:1}}>{c.name}</strong>
+                <span className="tag tag-mint" style={{fontSize:11.5}}>🏁 {S.stagesDoneCount(c.id)}</span>
                 <span className="tag tag-sun">⭐ {c.points}</span>
-                <span className="tag tag-primary">م{c.level}</span>
               </div>
             ))}
             {!ranking.length && <p className="muted">لا يوجد بيانات بعد.</p>}
@@ -1024,10 +1152,10 @@ function ChildrenMgr(){
               <div style={{flex:1}}><strong style={{fontSize:16}}>{c.name}</strong>
                 <div className="muted" style={{fontSize:13}}>العمر: {c.age} • {S.tasksOf(c.id).length} مهمة</div></div>
             </div>
-            <div className="row" style={{gap:6,marginBottom:12}}>
+            <div className="row wrap" style={{gap:6,marginBottom:12}}>
               <span className="tag tag-sun">⭐ {c.points}</span>
               <span className="tag tag-primary">المستوى {c.level}</span>
-              <span className="tag tag-mint">{S.childPct(c.id)}%</span>
+              <span className="tag tag-mint">🏁 {S.stagesDoneCount(c.id)}/{S.stagesWithTasks(c.id).length} مرحلة</span>
             </div>
             <div className="row" style={{gap:8}}>
               <button className="btn btn-ghost btn-sm" style={{flex:1,justifyContent:"center"}} onClick={()=>setEdit(c)}>✏️ تعديل</button>
