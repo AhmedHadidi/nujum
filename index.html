@@ -652,11 +652,14 @@ function ChildPortal({childId,onLogout}){
   // نعتمد على وجود شهادة مسجّلة لتفادي تكرار النافذة المزعجة.
   useEffect(()=>{
     const certIds = new Set((S.db.certificates||[]).filter(c=>c.childId===childId).map(c=>c.stageId));
-    // التهيئة الأولى: سجّل ما هو مكتمل مسبقاً دون احتفال
+    // التهيئة الأولى: سجّل شهادات المراحل المكتملة سابقاً (بصمت، دون احتفال)
     if(seenRef.current===null){
       seenRef.current = new Set();
       S.stagesWithTasks(childId).forEach(s=>{
-        if(S.stageComplete(childId,s.id)) seenRef.current.add(s.id);
+        if(S.stageComplete(childId,s.id)){
+          seenRef.current.add(s.id);
+          if(!certIds.has(s.id)) S.saveCertificate(childId,s);  // استرجاع الشهادات القديمة بأثر رجعي
+        }
       });
       return;
     }
@@ -1020,6 +1023,7 @@ function Overview(){
                     </div>
                     {active ? (
                       <>
+                        {sDone>0 && <div className="tag tag-mint" style={{fontSize:11,padding:"1px 7px",marginBottom:4}}>✓ أكمل {sDone} مرحلة سابقة</div>}
                         <div className="row between" style={{fontSize:12,marginBottom:3}}>
                           <span className="muted" style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{active.name}</span>
                           <span className="muted">{aPct}%</span>
